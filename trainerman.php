@@ -1,5 +1,103 @@
 <?php
+// Start session early so AJAX endpoints can access $_SESSION
 session_start();
+
+// --- NEW: AJAX endpoints for notifications & chat (check_unread, fetch_conversation, send_message) ---
+if (isset($_REQUEST['ajax']) && $_REQUEST['ajax']) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Ensure trainer is authenticated for AJAX calls
+    if (!isset($_SESSION['trainer_id']) || empty($_SESSION['trainer_id'])) {
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit();
+    }
+
+    $trainer_id = intval($_SESSION['trainer_id']);
+
+    $db = new mysqli("localhost", "root", "", "rawfit");
+    if ($db->connect_error) {
+        echo json_encode(['success' => false, 'error' => 'DB connection error']);
+        exit();
+    }
+
+    $action = $_REQUEST['action'] ?? '';
+
+    if ($action === 'check_unread') {
+        // return list of conversations with unread counts and last message time
+        $sql = "SELECT tm.user_id, r.name AS user_name, tm.course_id, tc.title AS course_title,
+                       MAX(tm.created_at) AS last_at,
+                       SUM(CASE WHEN tm.is_read = 0 AND tm.sender_type = 'user' THEN 1 ELSE 0 END) AS unread_count
+                FROM trainer_messages tm
+                LEFT JOIN register r ON r.id = tm.user_id
+                LEFT JOIN trainer_courses tc ON tc.id = tm.course_id
+                WHERE tm.trainer_id = ?
+                GROUP BY tm.user_id, tm.course_id
+                ORDER BY last_at DESC
+                LIMIT 50";
+        $stmt = $db->prepare($sql);
+        $stmt->bind_param('i', $trainer_id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = $res->fetch_all(MYSQLI_ASSOC);
+        echo json_encode(['success' => true, 'conversations' => $rows]);
+        $stmt->close();
+        $db->close();
+        exit();
+    }
+
+    if ($action === 'fetch_conversation') {
+        $course_id = intval($_REQUEST['course_id'] ?? 0);
+        $user_id = intval($_REQUEST['user_id'] ?? 0);
+        if (!$course_id || !$user_id) {
+            echo json_encode(['success' => false, 'error' => 'Missing params']);
+            $db->close();
+            exit();
+        }
+        // Mark user's messages as read
+        $u = $db->prepare("UPDATE trainer_messages SET is_read = 1 WHERE trainer_id = ? AND course_id = ? AND user_id = ? AND sender_type = 'user' AND is_read = 0");
+        $u->bind_param('iii', $trainer_id, $course_id, $user_id);
+        $u->execute();
+        $u->close();
+
+        $q = $db->prepare("SELECT id, user_id, trainer_id, course_id, message, sender_type, created_at, is_read FROM trainer_messages WHERE trainer_id = ? AND course_id = ? AND user_id = ? ORDER BY created_at ASC");
+        $q->bind_param('iii', $trainer_id, $course_id, $user_id);
+        $q->execute();
+        $r = $q->get_result();
+        $msgs = $r->fetch_all(MYSQLI_ASSOC);
+        echo json_encode(['success' => true, 'messages' => $msgs]);
+        $q->close();
+        $db->close();
+        exit();
+    }
+
+    if ($action === 'send_message') {
+        // trainer sends reply to user
+        $payload = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $message = trim($payload['message'] ?? '');
+        $course_id = intval($payload['course_id'] ?? 0);
+        $user_id = intval($payload['user_id'] ?? 0);
+
+        if (!$message || !$course_id || !$user_id) {
+            echo json_encode(['success' => false, 'error' => 'Missing fields']);
+            $db->close();
+            exit();
+        }
+
+        $ins = $db->prepare("INSERT INTO trainer_messages (user_id, trainer_id, course_id, message, sender_type, is_read) VALUES (?, ?, ?, ?, 'trainer', 0)");
+        $ins->bind_param('iiis', $user_id, $trainer_id, $course_id, $message);
+        $ok = $ins->execute();
+        $ins->close();
+
+        echo json_encode(['success' => $ok]);
+        $db->close();
+        exit();
+    }
+
+    // default
+    echo json_encode(['success' => false, 'error' => 'Unknown action']);
+    $db->close();
+    exit();
+}
 
 if (!isset($_SESSION['trainer_id'])) {
     header("Location: trainerlogin.php"); // Redirect to trainer login page
@@ -67,6 +165,40 @@ $quickStats = [
 ];
 
 $conn->close();
+
+// --- NEW: support opening a specific conversation via GET params (open_user & open_course) ---
+$open_user = intval($_GET['open_user'] ?? 0);
+$open_course = intval($_GET['open_course'] ?? 0);
+$open_user_name = '';
+$open_course_title = '';
+if ($open_user && $open_course) {
+	$_db = new mysqli("localhost", "root", "", "rawfit");
+	if (!$_db->connect_error) {
+		// fetch user name
+		$uq = $_db->prepare("SELECT name FROM register WHERE id = ?");
+		$uq->bind_param('i', $open_user);
+		$uq->execute();
+		$uq->bind_result($uname);
+		$uq->fetch();
+		$uq->close();
+		$open_user_name = $uname ?? '';
+
+		// fetch course title (ensure it belongs to this trainer optionally)
+		$cq = $_db->prepare("SELECT title FROM trainer_courses WHERE id = ?");
+		$cq->bind_param('i', $open_course);
+		$cq->execute();
+		$cq->bind_result($ctitle);
+		$cq->fetch();
+		$cq->close();
+		$open_course_title = $ctitle ?? '';
+
+		$_db->close();
+	}
+}
+
+// NEW: chat-mode flag when visiting trainerman.php?chat=1
+$open_chat = (isset($_GET['chat']) && $_GET['chat'] == '1') ? 1 : 0;
+
 ?>
 
 <!DOCTYPE html>
@@ -125,16 +257,11 @@ $conn->close();
                         </svg>
                         <span>Course</span>
                     </a>
-          
                 </div>
-
-            
-    
-    
 
                 <!-- Profile Menu -->
                 <div class="relative">
-                    <button id="profile-menu-button" class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors focus:outline-none">
+                    <button id="profile-menu-button" class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <img class="h-8 w-8 rounded-full object-cover" src="<?php echo $trainer['avatar']; ?>" alt="<?php echo htmlspecialchars($trainer['name']); ?>">
                         <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,6 +332,13 @@ $conn->close();
                 </div>
             </div>
 
+            <!-- Open Messages button (moved from nav) -->
+            <div class="mt-4">
+                <a href="trainer_messages.php" id="open-messages-left" class="inline-flex items-center justify-center w-full max-w-xs bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>Open Messages</span>
+                </a>
+            </div>
         </section>
 
         <!-- Sidebar -->
@@ -302,42 +436,209 @@ $conn->close();
     </div>
 
     </div>
+<!-- --- JS: polling unread conversations, show dropdown, open chat, send message --- -->
+<script>
+(async function(){
+    const trainerId = <?php echo intval($_SESSION['trainer_id']); ?>;
+    const chatPanel = document.getElementById('trainer-chat-panel');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatUserTitle = document.getElementById('chat-user-title');
+    const chatCourseTitle = document.getElementById('chat-course-title');
+    const chatInput = document.getElementById('chat-input');
+    const chatCourseIdInput = document.getElementById('chat-course-id');
+    const chatUserIdInput = document.getElementById('chat-user-id');
+    const closeChat = document.getElementById('close-chat');
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Profile dropdown functionality
-            const profileButton = document.getElementById('profile-menu-button');
-            const profileDropdown = document.getElementById('profile-dropdown');
-            
-            if (profileButton && profileDropdown) {
-                profileButton.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    profileDropdown.classList.toggle('hidden');
-                });
+    let pollingTimer = null;
 
-                document.addEventListener('click', function() {
-                    profileDropdown.classList.add('hidden');
-                });
+    console.log('trainer chat script initialized');
 
-                profileDropdown.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
+    closeChat?.addEventListener('click', () => {
+        chatPanel.classList.add('hidden');
+    });
+
+    // ensure the "Open Messages" button still works
+    document.getElementById('open-all-messages')?.addEventListener('click', () => {
+        fetchUnread().then(items => {
+            if (items && items.length) {
+                // open first conversation
+                openConversation(items[0].course_id, items[0].user_id, items[0].user_name, items[0].course_title);
             }
-
-            // Smooth animations for interactive elements
-            const cards = document.querySelectorAll('.bg-gray-800\\/50');
-            cards.forEach(card => {
-                card.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'scale(1.02)';
-                    this.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.15)';
-                });
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'scale(1)';
-                    this.style.boxShadow = '';
-                });
-            });
         });
-    </script>
+    });
+
+    async function fetchUnread(){
+        try {
+            const res = await fetch(window.location.pathname + '?ajax=1&action=check_unread');
+            const data = await res.json();
+            if (!data.success) return [];
+            const conv = data.conversations || [];
+            // update unread count (sum)
+            const totalUnread = conv.reduce((s,i)=> s + parseInt(i.unread_count || 0), 0);
+            // populate dropdown list (only if msg-list exists)
+            if (!msgList) return conv;
+            msgList.innerHTML = conv.map(c => {
+                const last = new Date(c.last_at || Date.now()).toLocaleString();
+                const unreadBadge = (c.unread_count && c.unread_count > 0) ? `<span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-white bg-red-600 rounded-full">${c.unread_count}</span>` : '';
+                return `<div class="w-full p-3 hover:bg-gray-800/60 flex justify-between items-start list-row" data-course="${c.course_id}" data-user="${c.user_id}>
+                            <div class="min-w-0">
+                                <div class="text-sm font-semibold text-white truncate user-name">${escapeHtml(c.user_name || 'User')}</div>
+                                <div class="text-xs text-gray-400 truncate course-title">${escapeHtml(c.course_title || 'Course')}</div>
+                                <div class="text-xs text-gray-400 mt-1">Last: ${last}</div>
+                            </div>
+                            <div class="ml-3 flex flex-col items-end space-y-2">
+                                ${unreadBadge}
+                                <button type="button" class="open-chat-btn text-xs text-orange-400 px-2 py-1 border border-orange-400 rounded hover:bg-orange-400/10" data-course="${c.course_id}" data-user="${c.user_id}" aria-label="Open chat with ${escapeHtml(c.user_name || 'User')}">Open Chat</button>
+                            </div>
+                        </div>`;
+            }).join('');
+            // attach delegated click handler once (prevents duplicates)
+            if (msgList && !msgList.dataset.delegated) {
+                msgList.addEventListener('click', function(e) {
+                    // find a button with data-course or the row with data-course
+                    const btn = e.target.closest('.open-chat-btn');
+                    const row = e.target.closest('.list-row') || (btn && btn.closest('.list-row'));
+                    const target = btn || row;
+                    if (!target) return;
+                    e.stopPropagation();
+                    const courseId = target.getAttribute('data-course') || target.dataset.course;
+                    const userId = target.getAttribute('data-user') || target.dataset.user;
+                    const userName = row?.querySelector('.user-name')?.textContent?.trim() ?? 'User';
+                    const courseTitle = row?.querySelector('.course-title')?.textContent?.trim() ?? 'Course';
+                    console.log('msgList click open', { courseId, userId, userName, courseTitle });
+                    openConversation(courseId, userId, userName, courseTitle);
+                }, false);
+                msgList.dataset.delegated = '1';
+            }
+ 
+             return conv;
+         } catch (err) {
+             console.error('fetchUnread err', err);
+             return [];
+         }
+     }
+
+    async function openConversation(courseId, userId, userName, courseTitle) {
+        console.log('openConversation called', { courseId, userId, userName, courseTitle });
+        chatPanel.classList.remove('hidden');
+        chatUserTitle.textContent = userName || 'Conversation';
+        chatCourseTitle.textContent = courseTitle || '';
+        chatCourseIdInput.value = courseId;
+        chatUserIdInput.value = userId;
+        chatMessages.innerHTML = '<div class="text-xs text-gray-400">Loading...</div>';
+        await loadConversation(courseId, userId);
+        // start short polling for currently opened conversation
+        if (pollingTimer) clearInterval(pollingTimer);
+        pollingTimer = setInterval(()=> loadConversation(courseId, userId, true), 3000);
+        // focus on input for quick replies
+        setTimeout(()=> {
+            try { chatInput.focus(); } catch(e){/*ignore*/;}
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 200);
+    }
+
+    async function loadConversation(courseId, userId, keepScroll) {
+        try {
+            const res = await fetch(window.location.pathname + `?ajax=1&action=fetch_conversation&course_id=${courseId}&user_id=${userId}`);
+            const data = await res.json();
+            if (!data.success) {
+                chatMessages.innerHTML = '<div class="text-xs text-gray-400">No messages</div>';
+                return;
+            }
+            const msgs = data.messages || [];
+            chatMessages.innerHTML = msgs.map(m => {
+                const cls = m.sender_type === 'trainer' ? 'justify-end' : 'justify-start';
+                const bubbleBg = m.sender_type === 'trainer' ? 'bg-orange-500/20' : 'bg-gray-700';
+                const who = m.sender_type === 'trainer' ? 'You' : 'User';
+                return `<div class="flex ${cls}"><div class="max-w-[85%] ${bubbleBg} rounded-lg p-2"><div class="text-xs text-gray-300 font-semibold">${who}</div><div class="text-sm text-white mt-1">${escapeHtml(m.message)}</div><div class="text-xs text-gray-400 mt-1">${new Date(m.created_at).toLocaleString()}</div></div></div>`;
+            }).join('');
+            if (!keepScroll) chatMessages.scrollTop = chatMessages.scrollHeight;
+            else chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (err) {
+            console.error('loadConversation err', err);
+        }
+    }
+
+    // send reply
+    document.getElementById('chat-send-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        const courseId = chatCourseIdInput.value;
+        const userId = chatUserIdInput.value;
+        if (!message || !courseId || !userId) return;
+        try {
+            const res = await fetch(window.location.pathname + '?ajax=1&action=send_message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, course_id: courseId, user_id: userId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                chatInput.value = '';
+                // refresh messages
+                loadConversation(courseId, userId);
+                // also refetch unread counts/conversations
+                fetchUnread();
+            } else {
+                console.error('Send message failed', data.error);
+            }
+        } catch (err) {
+            console.error('send_message err', err);
+        }
+    });
+
+    // expose these functions so external inline scripts (and links from other pages) can open a chat
+    window.openConversation = openConversation;
+    window.fetchUnread = fetchUnread;
+
+    // --- NEW: auto-open conversation if open_user & open_course are set ---
+    if (<?php echo json_encode($open_user && $open_course); ?>) {
+        openConversation(<?php echo json_encode($open_course); ?>, <?php echo json_encode($open_user); ?>, <?php echo json_encode($open_user_name); ?>, <?php echo json_encode($open_course_title); ?>);
+    }
+
+    // --- NEW: if ?chat=1 then fetch unread and open first conversation if any, else show dropdown ---
+    if (<?php echo json_encode($open_chat); ?>) {
+        try {
+            const conv = await fetchUnread();
+            if (conv && conv.length > 0) {
+                const first = conv[0];
+                openConversation(first.course_id, first.user_id, first.user_name, first.course_title);
+            } else {
+                // show dropdown (if exists) so trainer sees list area even when empty
+                if (dropdown) dropdown.classList.remove('hidden');
+            }
+         } catch (e) {
+             console.error('chat-mode open failed', e);
+         }
+     }
+ 
+ })();
+</script>
+
+<!-- NEW: If trainerman.php was opened with ?open_user=..&open_course=.. call openConversation -->
+<?php if ($open_user && $open_course): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ensure functions are available on window (IIFE executed). Retry a few times if necessary.
+    const courseId = <?= json_encode($open_course); ?>;
+    const userId = <?= json_encode($open_user); ?>;
+    const userName = <?= json_encode($open_user_name ?: 'User'); ?>;
+    const courseTitle = <?= json_encode($open_course_title ?: 'Course'); ?>;
+
+    let tries = 0;
+    function tryOpen() {
+        if (window.openConversation) {
+            window.openConversation(courseId, userId, userName, courseTitle);
+        } else if (tries < 10) {
+            tries++;
+            setTimeout(tryOpen, 150);
+        } else {
+            console.warn('openConversation not available');
+        }
+    }
+    tryOpen();
+});
+</script>
+<?php endif; ?>
 </body>
 </html>

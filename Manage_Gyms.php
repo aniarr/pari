@@ -254,6 +254,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div id="preview" class="flex flex-wrap gap-3 mt-4"></div>
       </div>
 
+      <!-- Gym Description -->
+      <div class="md:col-span-2">
+        <div class="relative">
+          <textarea name="gym_description" required placeholder=" " rows="4" 
+            class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl 
+            text-white placeholder-transparent focus:outline-none focus:border-orange-500 
+            focus:ring-2 focus:ring-orange-500/30 transition"></textarea>
+          <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none 
+            transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base 
+            peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
+            Gym Description
+          </label>
+        </div>
+      </div>
+
       <!-- Submit -->
       <div class="md:col-span-2 flex justify-center">
         <button type="submit"
@@ -265,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <!-- Back Link -->
-  <a href="home.php" class="mt-12 text-orange-400 hover:text-orange-300 font-medium flex items-center gap-2 transition">
+  <a href="owner_dashboard.php" class="mt-12 text-orange-400 hover:text-orange-300 font-medium flex items-center gap-2 transition">
     <i class="fas fa-arrow-left"></i> Back to Dashboard
   </a>
 

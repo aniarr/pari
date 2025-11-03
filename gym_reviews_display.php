@@ -65,7 +65,6 @@ $result = $stmt->get_result();
       </div>
       <div class="hidden md:flex space-x-6">
         <a href="owner_home.php" class="text-gray-300 hover:text-orange-400 transition">Home</a>
-        <a href="owner_dashboard.php" class="text-gray-300 hover:text-orange-400 transition">Dashboard</a>
         <a href="trainer.php" class="text-gray-300 hover:text-orange-400 transition">Trainers</a>
         <a href="reviews.php" class="text-orange-400 font-medium">Reviews</a>
       </div>

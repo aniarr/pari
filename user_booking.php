@@ -270,8 +270,7 @@ $conn->close();
             <?php if (!empty($trainer['trainer_image'])): ?>
               <img src="<?php echo htmlspecialchars($trainer['trainer_image']); ?>" alt="Trainer Image" class="w-32 h-32 object-cover rounded-full">
             <?php else: ?>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" class="text-white">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
@@ -293,6 +292,19 @@ $conn->close();
             <p class="text-gray-300 mb-2">Updated At: <?php echo htmlspecialchars($trainer['updated_at']); ?></p>
           </div>
         </div>
+        <!-- Update Message Button after trainer info -->
+        <div class="mt-4">
+          <?php if ($trainer['id']): ?>
+          <!-- Link to user messaging page (messages.php) so the logged-in user can message the trainer -->
+          <a href="messages.php?trainer_id=<?php echo intval($trainer['id']); ?>&course_id=<?php echo intval($course_id); ?>" 
+            class="inline-flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+             </svg>
+             <span>Message Trainer</span>
+           </a>
+           <?php endif; ?>
+         </div>
       </div>
 
     <?php else: ?>
