@@ -183,11 +183,20 @@ $conn->close();
     <main class="pt-20 min-h-screen p-4 sm:p-6 lg:p-8">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-3 incorporar el texto completo3xl sm:text-4xl font-bold text-white mb-2">
-                    Nutrition <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Calculator</span>
-                </h1>
-                <p class="text-gray-400 text-lg">Track your calories, macros, and reach your nutrition goals</p>
+            <div class="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3 incorporar el texto completo3xl sm:text-4xl font-bold text-white mb-2">
+                        Nutrition <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Calculator</span>
+                    </h1>
+                    <p class="text-gray-400 text-lg">Track your calories, macros, and reach your nutrition goals</p>
+                </div>
+
+                <!-- Daily Task Button (upper-right below header) -->
+                <div class="ml-4">
+                    <a href="nutrition_updated.php" id="dailyTaskBtn" class="inline-flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-sm">
+                        <span>Daily Task</span>
+                    </a>
+                </div>
             </div>
 
             <!-- Calculator Section -->
