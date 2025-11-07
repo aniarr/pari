@@ -145,6 +145,13 @@
                         </svg>
                         <span>Trainers</span>
                     </a>
+                     <a href="display_gym.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                            <path d="M12 18h.01"/>
+                        </svg>
+                        <span>Gyms</span>
+                    </a> 
                 </div>
 
                 <!-- User Info -->
@@ -262,72 +269,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800/50 backdrop-blur-sm py-12 border-t border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div>
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                <path d="M6.5 6.5h11v11h-11z"/>
-                                <path d="M6.5 6.5L2 2"/>
-                                <path d="M17.5 6.5L22 2"/>
-                                <path d="M6.5 17.5L2 22"/>
-                                <path d="M17.5 17.5L22 22"/>
-                            </svg>
-                        </div>
-                        <span class="text-white font-bold text-xl">RawFit</span>
-                    </div>
-                    <p class="text-gray-400 mb-4">Transform your body, transform your life. Join our fitness community and achieve your goals with expert guidance and state-of-the-art facilities.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37-4-4-4 4"/><path d="M21 16.5l-4-4-4 4"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Quick Links</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="index.php" class="hover:text-orange-500 transition-colors">Home</a></li>
-                        <li><a href="nutrition.php" class="hover:text-orange-500 transition-colors">Nutrition</a></li>
-                        <li><a href="trainer.php" class="hover:text-orange-500 transition-colors">Trainers</a></li>
-                        <li><a href="profile.php" class="hover:text-orange-500 transition-colors">Profile</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Support</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">FAQ</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Contact Us</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Terms of Service</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Privacy Policy</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Contact Info</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li>123 Fitness Street</li>
-                        <li>FitCity, GC 12345</li>
-                        <li>(555) 123-4567</li>
-                        <li>info@rawfitgym.com</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="mt-8 pt-8 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
-                <p class="text-gray-400">&copy; 2025 RawFit Gym. All rights reserved.</p>
-                <div class="flex space-x-4 mt-4 sm:mt-0">
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Privacy Policy</a>
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Terms of Service</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+  
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

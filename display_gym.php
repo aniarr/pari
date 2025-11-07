@@ -6,7 +6,6 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
-$userName = $_SESSION['user_name'] ?? 'User';
 
 // === 2. DB CONNECTION ===
 $conn = new mysqli("localhost", "root", "", "rawfit");
@@ -64,6 +63,18 @@ function getGymImages($conn, $gym_id) {
     $st->close();
     return $imgs;
 }
+
+// Fix user name fetching at the top
+$userName = "";
+if (isset($_SESSION['user_id'])) {
+    $stmt = $conn->prepare("SELECT name FROM register WHERE id = ?");
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $stmt->bind_result($userName);
+    $stmt->fetch();
+    $stmt->close();
+}
+$userName = $userName ?: 'User';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,7 +130,7 @@ function getGymImages($conn, $gym_id) {
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <span>Trainers</span>
             </a>
-            <a href="display_gym.php" class="nav-link active flex items-center space-x-2 px-3 py-2 rounded-lg">
+            <a href="display_gym.php" class="nav-link active flex items-center space-x-2 px-3 py-2 rounded-lg bg-orange-500 text-white transition-colors">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
                 <span>Gyms</span>
             </a>
@@ -153,7 +164,7 @@ function getGymImages($conn, $gym_id) {
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <span class="text-xs">Trainers</span>
         </a>
-        <a href="display_gym.php" class="mobile-nav-link active flex flex-col items-center space-y-1 px-3 py-2">
+        <a href="display_gym.php" class="mobile-nav-link active text-orange-500 flex flex-col items-center space-y-1 px-3 py-2">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
             <span class="text-xs">Gyms</span>
         </a>
@@ -165,34 +176,48 @@ function getGymImages($conn, $gym_id) {
     <!-- Header -->
     <div class="text-center mb-8">
         <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2">
-            Select Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Trainer</span>
+            Search Your Nearby <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Gym</span>
         </h1>
         <p class="text-gray-400 text-lg">Book sessions with our certified expert trainers</p>
     </div>
 
-    <!-- Filter Form -->
-    <form method="GET" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-gray-700">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <input type="text" name="city" value="<?= htmlspecialchars($cityFilter) ?>" placeholder="City"
-                class="bg-gray-700/80 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 w-full transition">
-            
-            <input type="text" name="location" value="<?= htmlspecialchars($locationFilter) ?>" placeholder="Location"
-                class="bg-gray-700/80 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 w-full transition">
-            
-            <input type="text" name="time" value="<?= htmlspecialchars($timeFilter) ?>" placeholder="Timings (e.g. 6am-10pm)"
-                class="bg-gray-700/80 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 w-full transition">
-            
-            <div class="flex items-center justify-center sm:justify-start space-x-2">
-                <button type="submit"
-                    class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-lg px-5 py-2.5 transition shadow-md w-full sm:w-auto">
-                    Search
-                </button>
-                <a href="display_gym.php"
-                    class="bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg px-5 py-2.5 transition shadow-md w-full sm:w-auto text-center">
-                    Clear
-                </a>
-            </div>
+        <!-- Filter Form -->
+        <form method="GET" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-gray-700">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+
+        <!-- City -->
+        <input type="text" name="city" 
+            value="<?= htmlspecialchars($cityFilter) ?>" 
+            placeholder="City"
+            class="bg-gray-700/80 border border-gray-600 rounded-xl px-4 py-3 text-white 
+            placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 
+            w-full transition shadow-sm">
+
+        <!-- Location -->
+        <input type="text" name="location"
+            value="<?= htmlspecialchars($locationFilter) ?>" 
+            placeholder="Location"
+            class="bg-gray-700/80 border border-gray-600 rounded-xl px-4 py-3 text-white 
+            placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 
+            w-full transition shadow-sm">
+
+        <!-- Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3 md:justify-end">
+            <button type="submit"
+                class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 
+                text-white font-medium rounded-xl px-6 py-3 transition shadow-md w-full sm:w-auto">
+                Search
+            </button>
+
+            <a href="display_gym.php"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl px-6 py-3
+                transition shadow-md w-full sm:w-auto text-center">
+                Clear
+            </a>
         </div>
+
+    </div>
+
     </form>
 </div>
 
@@ -211,10 +236,6 @@ function getGymImages($conn, $gym_id) {
                     $hero = $urls[0] ?? '';
                     $urlsJson = htmlspecialchars(json_encode($urls), ENT_QUOTES);
 
-                    $available = rand(0, 1);
-                    $badgeClass = $available ? 'bg-green-600' : 'bg-red-600';
-                    $badgeText  = $available ? 'Available' : 'Unavailable';
-
                     $stmtR = $conn->prepare('SELECT AVG(rating) AS avg, COUNT(*) AS cnt FROM gym_reviews WHERE gym_id = ?');
                     $stmtR->bind_param('i', $row['gym_id']); $stmtR->execute();
                     $resR = $stmtR->get_result()->fetch_assoc();
@@ -222,7 +243,7 @@ function getGymImages($conn, $gym_id) {
                     $reviewCount = (int)$resR['cnt'];
                     $stmtR->close();
 
-                    $focus = $row['focus'] ?? (stripos($row['gym_name'], 'cardio') !== false ? 'cardio' : 'strength');
+                    $location = $row['location'] ?? $row['gym_city'] ?? 'Location not specified';
                     $price = rand(55, 70);
                     $time = rand(7, 30);
                     ?>
@@ -235,9 +256,6 @@ function getGymImages($conn, $gym_id) {
                                     <img src="<?= htmlspecialchars($hero) ?>" alt="<?= htmlspecialchars($row['gym_name']) ?>"
                                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                                 </button>
-                                <div class="absolute top-2 right-2 px-3 py-1 text-xs font-semibold text-white rounded-full <?= $badgeClass ?>">
-                                    <?= $badgeText ?>
-                                </div>
                             </div>
                         <?php else: ?>
                             <div class="h-48 bg-gray-700 flex items-center justify-center rounded-t-2xl">
@@ -248,7 +266,7 @@ function getGymImages($conn, $gym_id) {
                         <!-- Content -->
                         <div class="p-5 space-y-3">
                             <h3 class="text-lg font-bold text-orange-400 line-clamp-1"><?= htmlspecialchars($row['gym_name']) ?></h3>
-                            <p class="text-xs text-gray-400 uppercase tracking-wider"><?= htmlspecialchars($focus) ?></p>
+                            <p class="text-xs text-gray-400"><?= htmlspecialchars($location) ?></p>
 
                             <!-- Stars -->
                             <div class="flex items-center space-x-0.5">
@@ -260,11 +278,7 @@ function getGymImages($conn, $gym_id) {
                                 <span class="ml-1 text-xs text-gray-400">(<?= $reviewCount ?>)</span>
                             </div>
 
-                            <!-- Price & Time -->
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="font-bold text-orange-400">$<?= $price ?> <span class="text-xs text-gray-400">/session</span></span>
-                                <span class="text-gray-400 text-xs"><?= $time ?> min</span>
-                            </div>
+                          <br>
 
                             <!-- CTA: open individual gym details page -->
                             <a href="gym_idv_details.php?gym_id=<?= (int)$row['gym_id'] ?>" class="w-full inline-block text-center bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium text-sm py-2.5 rounded-lg transition shadow-md">

@@ -103,6 +103,40 @@
     $stmt->close();
     $conn->close();
     ?>
+    <?php
+session_start();
+
+// Check login
+if (!isset($_SESSION['trainer_id'])) {
+    header("Location: trainer_login.php");
+    exit();
+}
+
+// Database connection
+$host = 'localhost';
+$dbname = 'rawfit';
+$username = 'root';
+$password = '';
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
+}
+
+// ✅ Fetch trainer details for navbar
+$trainer_id = $_SESSION['trainer_id'];
+$stmt = $pdo->prepare("SELECT name, trainer_image FROM trainer_details WHERE id = ?");
+$stmt->execute([$trainer_id]);
+$trainer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Default image fallback
+if (!$trainer || empty($trainer['trainer_image'])) {
+    $trainer['trainer_image'] = 'default-avatar.png';
+}
+?>
+
 
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
@@ -136,10 +170,33 @@
           
                 </div>
 
+               <!-- Profile Menu -->
                 <div class="relative">
-                    <a href="logout.php" class="text-sm text-gray-300 hover:text-white hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors">
-                        Sign Out
-                    </a>
+                    <button id="profile-menu-button" class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                       <img class="h-8 w-8 rounded-full object-cover"
+                                src="uploads/<?php echo htmlspecialchars($trainer['trainer_image']); ?>"
+                                alt="<?php echo htmlspecialchars($trainer['name']); ?>">
+                            <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 py-1 z-50">
+                        <a href="trainer_profile.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+                            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            View Profile
+                        </a>
+                        <a href="logout.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors">
+                            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Sign Out
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

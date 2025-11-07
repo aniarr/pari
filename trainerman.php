@@ -259,32 +259,79 @@ $open_chat = (isset($_GET['chat']) && $_GET['chat'] == '1') ? 1 : 0;
                     </a>
                 </div>
 
-                <!-- Profile Menu -->
-                <div class="relative">
-                    <button id="profile-menu-button" class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                        <img class="h-8 w-8 rounded-full object-cover" src="<?php echo $trainer['avatar']; ?>" alt="<?php echo htmlspecialchars($trainer['name']); ?>">
-                        <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
-                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    
-                    <!-- Dropdown Menu -->
-                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 py-1 z-50">
-                        <a href="trainer_profile.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
-                            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                            </svg>
-                            View Profile
-                        </a>
-                        <a href="logout.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors">
-                            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                            Sign Out
-                        </a>
-                    </div>
-                </div>
+              <!-- Profile Menu -->
+<div class="relative">
+    <!-- Button -->
+    <button id="profile-menu-button"
+        class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+        <img class="h-8 w-8 rounded-full object-cover"
+             src="<?php echo $trainer['avatar']; ?>"
+             alt="<?php echo htmlspecialchars($trainer['name']); ?>">
+        <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
+        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7"></path>
+        </svg>
+    </button>
+
+    <!-- Dropdown -->
+    <div id="profile-dropdown"
+        class="hidden absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-700 shadow-lg py-1 z-50 transition-all duration-200 ease-out transform opacity-0 scale-95">
+        <a href="trainer_profile.php"
+            class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            View Profile
+        </a>
+        <a href="logout.php"
+            class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors">
+            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            Sign Out
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("profile-menu-button");
+    const dropdown = document.getElementById("profile-dropdown");
+
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isHidden = dropdown.classList.contains("hidden");
+
+        // Close any open dropdown first
+        document.querySelectorAll(".profile-dropdown-open").forEach(el => {
+            el.classList.add("hidden", "opacity-0", "scale-95");
+            el.classList.remove("profile-dropdown-open", "opacity-100", "scale-100");
+        });
+
+        if (isHidden) {
+            dropdown.classList.remove("hidden", "opacity-0", "scale-95");
+            dropdown.classList.add("opacity-100", "scale-100", "profile-dropdown-open");
+        } else {
+            dropdown.classList.add("opacity-0", "scale-95");
+            setTimeout(() => dropdown.classList.add("hidden"), 150);
+            dropdown.classList.remove("profile-dropdown-open");
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("opacity-0", "scale-95");
+            setTimeout(() => dropdown.classList.add("hidden"), 150);
+            dropdown.classList.remove("profile-dropdown-open");
+        }
+    });
+});
+</script>
+
             </div>
         </div>
     </nav>
@@ -333,10 +380,13 @@ $open_chat = (isset($_GET['chat']) && $_GET['chat'] == '1') ? 1 : 0;
             </div>
 
             <!-- Open Messages button (moved from nav) -->
-            <div class="mt-4">
-                <a href="trainer_messages.php" id="open-messages-left" class="inline-flex items-center justify-center w-full max-w-xs bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200">
-                    <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <span>Open Messages</span>
+            <div class="mt-6 flex justify-center">
+                <a href="trainer_messages.php" id="open-messages-left" class="flex items-center gap-3 px-5 py-3 rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg transform transition hover:scale-105 focus:outline-none">
+                    <span class="flex items-center justify-center w-27 h-9 bg-white/10 rounded-full">
+                        <svg class="w-10 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    <span class="text-sm">Messages</span>
+                    <span id="open-messages-left-badge" class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-white bg-red-600 rounded-full hidden">0</span>
                 </a>
             </div>
         </section>
@@ -369,7 +419,7 @@ $open_chat = (isset($_GET['chat']) && $_GET['chat'] == '1') ? 1 : 0;
                     </a>
                 </div>
             </div>
-
+                
             <!-- Quick Stats -->
             <div class="h-[205px] bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
                 <h3 class="text-lg font-semibold text-white mb-4">Quick Stats</h3>
@@ -640,5 +690,47 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <?php endif; ?>
+
+<!-- small helper to update the small "Open Messages" badge -->
+<script>
+(function(){
+    const badge = document.getElementById('open-messages-left-badge');
+    const btn = document.getElementById('open-messages-left');
+
+    async function refreshLeftBadge(){
+        try {
+            const res = await fetch(window.location.pathname + '?ajax=1&action=check_unread');
+            const data = await res.json();
+            if (!data || !data.success) {
+                if (badge) badge.classList.add('hidden');
+                return;
+            }
+            const conv = data.conversations || [];
+            const total = conv.reduce((s,i)=> s + parseInt(i.unread_count || 0), 0);
+            if (badge) {
+                if (total > 0) {
+                    badge.textContent = total;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to refresh messages badge', e);
+        }
+    }
+
+    // refresh on load and periodically
+    document.addEventListener('DOMContentLoaded', refreshLeftBadge);
+    // also refresh when clicking the button (just before navigation)
+    if (btn) {
+        btn.addEventListener('click', function(){
+            // try one last refresh (non-blocking)
+            refreshLeftBadge().catch(()=>{});
+        });
+    }
+    setInterval(refreshLeftBadge, 10000); // update every 10s
+})();
+</script>
 </body>
 </html>

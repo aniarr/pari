@@ -38,7 +38,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($description)) $errors[] = "Description is required.";
     if (empty($category)) $errors[] = "Category is required.";
     if (empty($duration)) $errors[] = "Duration is required.";
-    if (empty($status)) $errors[] = "Status is required.";
     if (empty($start_date)) $errors[] = "Start date is required.";
     if (empty($end_date)) $errors[] = "End date is required.";
     if ($image && $image['error'] == UPLOAD_ERR_NO_FILE) {
@@ -104,6 +103,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
+<?php
+session_start();
+
+// Check login
+if (!isset($_SESSION['trainer_id'])) {
+    header("Location: trainer_login.php");
+    exit();
+}
+
+// Database connection
+$host = 'localhost';
+$dbname = 'rawfit';
+$username = 'root';
+$password = '';
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
+}
+
+// ✅ Fetch trainer details for navbar
+$trainer_id = $_SESSION['trainer_id'];
+$stmt = $pdo->prepare("SELECT name, trainer_image FROM trainer_details WHERE id = ?");
+$stmt->execute([$trainer_id]);
+$trainer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Default image fallback
+if (!$trainer || empty($trainer['trainer_image'])) {
+    $trainer['trainer_image'] = 'default-avatar.png';
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -164,11 +196,79 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           
                 </div>
 
-                <div class="relative">
-                    <a href="logout.php" class="text-sm text-gray-300 hover:text-white hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors">
-                        Sign Out
-                    </a>
-                </div>
+                <!-- Profile Menu -->
+<div class="relative">
+    <!-- Button -->
+    <button id="profile-menu-button"
+        class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+        <img class="h-8 w-8 rounded-full object-cover"
+     src="uploads/<?php echo htmlspecialchars($trainer['trainer_image']); ?>"
+     alt="<?php echo htmlspecialchars($trainer['name']); ?>">
+<span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
+ <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7"></path>
+        </svg>
+    </button>
+
+    <!-- Dropdown -->
+    <div id="profile-dropdown"
+        class="hidden absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-700 shadow-lg py-1 z-50 transition-all duration-200 ease-out transform opacity-0 scale-95">
+        <a href="trainer_profile.php"
+            class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            View Profile
+        </a>
+        <a href="logout.php"
+            class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors">
+            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            Sign Out
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("profile-menu-button");
+    const dropdown = document.getElementById("profile-dropdown");
+
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isHidden = dropdown.classList.contains("hidden");
+
+        // Close any open dropdown first
+        document.querySelectorAll(".profile-dropdown-open").forEach(el => {
+            el.classList.add("hidden", "opacity-0", "scale-95");
+            el.classList.remove("profile-dropdown-open", "opacity-100", "scale-100");
+        });
+
+        if (isHidden) {
+            dropdown.classList.remove("hidden", "opacity-0", "scale-95");
+            dropdown.classList.add("opacity-100", "scale-100", "profile-dropdown-open");
+        } else {
+            dropdown.classList.add("opacity-0", "scale-95");
+            setTimeout(() => dropdown.classList.add("hidden"), 150);
+            dropdown.classList.remove("profile-dropdown-open");
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("opacity-0", "scale-95");
+            setTimeout(() => dropdown.classList.add("hidden"), 150);
+            dropdown.classList.remove("profile-dropdown-open");
+        }
+    });
+});
+</script>
+
             </div>
         </div>
     </nav>
@@ -209,15 +309,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <input type="number" name="duration" id="duration" min="1" max="52" value="<?php echo isset($_POST['duration']) ? htmlspecialchars($_POST['duration']) : ''; ?>" 
                            class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
                 </div>
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-300">Status</label>
-                    <select name="status" id="status" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="">Select Status</option>
-                        <option value="active" <?php echo (isset($_POST['status']) && $_POST['status'] === 'active') ? 'selected' : ''; ?>>Active</option>
-                        <option value="inactive" <?php echo (isset($_POST['status']) && $_POST['status'] === 'inactive') ? 'selected' : ''; ?>>Inactive</option>
-                        <option value="completed" <?php echo (isset($_POST['status']) && $_POST['status'] === 'completed') ? 'selected' : ''; ?>>Completed</option>
-                    </select>
-                </div>
+                
                 <div>
                     <label for="start_date" class="block text-sm font-medium text-gray-300">Start Date</label>
                     <input type="date" name="start_date" id="start_date" value="<?php echo isset($_POST['start_date']) ? htmlspecialchars($_POST['start_date']) : ''; ?>" 

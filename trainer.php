@@ -61,17 +61,15 @@
         while ($row = $result->fetch_assoc()) {
             $trainerName = "Trainer " . $row['trainer_id'];
             $rating = rand(4, 5);
-            $availability = (rand(0, 1) ? "Available" : "Unavailable");
             $price = rand(60, 85);
             $duration = $row['duration'] * 7;
 
             $trainers[] = [
-                'id' => $row['id'], // Add this line
+                'id' => $row['id'],
                 'name' =>  $row['title'],
                 'specialty' => $row['category'],
                 'description' => $row['description'],
                 'rating' => $rating,
-                'availability' => $availability,
                 'price' => $price,
                 'duration' => $duration,
                 'image' => $row['image_path'] ? "uploads/" . $row['image_path'] : "https://via.placeholder.com/400x300",
@@ -104,7 +102,7 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="home.php" class="nav-link active flex items-center space-x-2 px-3 py-2 rounded-lg bg-orange-500 text-white transition-colors">
+                    <a href="home.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                             <polyline points="9,22 9,12 15,12 15,22"/>
@@ -118,7 +116,7 @@
                         </svg>
                         <span>Nutrition</span>
                     </a>
-                    <a href="trainer.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <a href="trainer.php" class="nav-link active flex items-center space-x-2 px-3 py-2 rounded-lg bg-orange-500 text-white transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                             <circle cx="9" cy="7" r="4"/>
@@ -181,7 +179,7 @@
             </div>
         </div>
     </nav>
-
+    
     <!-- Main Content -->
     <br><br>
     <main class="pt-20 min-h-screen p-4 sm:p-6 lg:p-8">
@@ -193,7 +191,7 @@
                 </h1>
                 <p class="text-gray-400 text-lg">Book sessions with our certified expert trainers</p>
             </div>
-
+             
             <!-- Filter Bar -->
             <div class="mb-8 bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700">
                 <div class="flex flex-wrap items-center gap-4">
@@ -220,18 +218,16 @@
                     </div>
                 </div>
             </div>
-
+            
             <!-- Trainers Grid -->
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="trainersGrid">
+                
                 <?php foreach ($trainers as $trainer): ?>
                     <div class="trainer-card bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700 hover:bg-gray-800/70 transition-all duration-300 group" 
                          data-specialty="<?php echo strtolower($trainer['specialty']); ?>" 
                          data-rating="<?php echo $trainer['rating']; ?>">
                         <div class="relative">
                             <img src="<?php echo $trainer['image']; ?>" alt="<?php echo htmlspecialchars($trainer['name']); ?>" class="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300">
-                            <div class="absolute top-4 right-4 bg-<?php echo $trainer['availability'] === "Available" ? "green" : "red"; ?>-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                                <?php echo $trainer['availability']; ?>
-                            </div>
                         </div>
                         <div class="p-6">
                             <h3 class="text-xl font-bold text-white mb-2"><?php echo htmlspecialchars($trainer['name']); ?></h3>
@@ -247,10 +243,7 @@
                                 <span class="text-gray-400 text-sm">(Random reviews)</span>
                             </div>
                             <p class="text-gray-400 text-sm mb-4"><?php echo htmlspecialchars($trainer['description']); ?></p>
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-white font-bold text-lg">$<?php echo $trainer['price']; ?>/session</span>
-                                <span class="text-gray-400 text-sm"><?php echo $trainer['duration']; ?> min</span>
-                            </div>
+                           <br>
                          <a href="user_booking.php?course_id=<?php echo $trainer['id']; ?>"
                         class="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-center block">
                             View Details
@@ -258,6 +251,35 @@
                         </div>
                     </div>
                 <?php endforeach; ?>
+                <!-- Back to Top Button -->
+<button onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+        class="fixed bottom-8 right-8 w-12 h-12 rounded-full bg-gradient-to-t from-orange-500 to-orange-400 
+               flex items-center justify-center shadow-lg hover:shadow-xl 
+               hover:scale-110 transition-all duration-300 
+               border border-orange-300/20 
+               opacity-0 invisible group"
+        id="backToTopBtn"
+        aria-label="Back to top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+         stroke-width="2.5" class="text-white">
+        <path d="M12 19V5M5 12l7-7 7 7"/>
+    </svg>
+</button>
+
+<!-- Optional: JavaScript to show button only when scrolled -->
+<script>
+    const backToTopBtn = document.getElementById('backToTopBtn');
+    
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            backToTopBtn.classList.remove('opacity-0', 'invisible');
+            backToTopBtn.classList.add('opacity-100', 'visible');
+        } else {
+            backToTopBtn.classList.remove('opacity-100', 'visible');
+            backToTopBtn.classList.add('opacity-0', 'invisible');
+        }
+    });
+</script>
             </div>
          
             </div>
@@ -298,8 +320,8 @@
         }
 
         function filterTrainers() {
-            const searchTerm = document.getElementById('searchTrainers').value.toLowerCase();
-            const specialtyFilter = document.getElementById('specialtyFilter').value.toLowerCase();
+            const searchTerm = document.getElementById('searchTrainers').value toLowerCase();
+            const specialtyFilter = document.getElementById('specialtyFilter').value toLowerCase();
             const ratingFilter = document.getElementById('ratingFilter').value;
             
             const trainerCards = document.querySelectorAll('.trainer-card');

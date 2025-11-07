@@ -110,7 +110,6 @@ $conn->close();
                     <div class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg opacity-0 invisible transition-all duration-300 group-hover:opacity-100 group-hover:visible z-10">
                         <a href="auth.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">User Login</a>
                         <a href="trainerlogin.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Trainer Login</a>
-                        <a href="adminlogin.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Admin Login</a>
                         <a href="login_owner.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Gym Owner</a>
                     </div>
                 </div>
@@ -210,8 +209,8 @@ $conn->close();
                         <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                 </a>
-                <a href="#programs" class="bg-transparent border-2 border-orange-500 text-orange-500 px-8 py-4 rounded-lg font-semibold hover:bg-orange-500/10 hover:text-orange-400 hover:scale-105 transition-all duration-300">
-                    Explore Programs
+                <a href="auth.php?action=register" class="bg-transparent border-2 border-orange-500 text-orange-500 px-8 py-4 rounded-lg font-semibold hover:bg-orange-500/10 hover:text-orange-400 hover:scale-105 transition-all duration-300">
+                    Register Now
                 </a>
             </div>
             <div class="mt-12 flex justify-center space-x-4 animate-pulse">
@@ -243,6 +242,13 @@ $conn->close();
 </section>
 
     <!-- About Section -->
+      <a href="index.php" 
+                            class="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105 z-50"
+                            title="Back to Home">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H9.75A.75.75 0 009 15v6.25a.75.75 0 01-.75.75H3a1 1 0 01-1-1V9.75z" />
+                            </svg>
+                            </a>
     <section id="about" class="py-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-2 gap-8">
@@ -320,49 +326,9 @@ $conn->close();
                 <?php endforeach; ?>
             </div>
         </div>
+
     </section>
 
-    <!-- Trainers Section -->
-    <section id="trainers" class="py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-white mb-4">Meet Our Trainers</h2>
-            <p class="text-gray-400 text-lg mb-8">
-                Our certified trainers are here to guide, motivate, and help you achieve your fitness goals
-            </p>
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300">
-                    <img src="https://images.pexels.com/photos/1431282/pexels-photo-1431282.jpeg?auto=compress&cs=tinysrgb&w=400" alt="Sarah Johnson" class="rounded-lg mb-4 object-cover w-full h-64" />
-                    <h3 class="text-xl font-semibold text-white mb-2">Sarah Johnson</h3>
-                    <p class="text-orange-500 text-sm mb-2">Strength & Conditioning</p>
-                    <p class="text-gray-400 mb-4">10+ years helping clients build strength and confidence</p>
-                    <div class="flex space-x-4 mb-4">
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37-4-4-4 4"/><path d="M21 16.5l-4-4-4 4"/></svg>
-                        </a>
-                    </div>
-                    <button class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all">Learn More</button>
-                </div>
-                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300">
-                    <img src="https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&w=400" alt="Mike Rodriguez" class="rounded-lg mb-4 object-cover w-full h-64" />
-                    <h3 class="text-xl font-semibold text-white mb-2">Mike Rodriguez</h3>
-                    <p class="text-orange-500 text-sm mb-2">HIIT & Cardio</p>
-                    <p class="text-gray-400 mb-4">Former athlete specializing in high-intensity training</p>
-                    <div class="flex space-x-4 mb-4">
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37-4-4-4 4"/><path d="M21 16.5l-4-4-4 4"/></svg>
-                        </a>
-                    </div>
-                    <button class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all">Learn More</button>
-                </div>
-            </div>
-        </div>
-    </section>
 <!-- Contact Section -->
 <section id="contact" class="py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -430,76 +396,10 @@ $conn->close();
                 </form>
             </div>
         </div>
+                                        <a href="adminlogin.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Admin Login</a>
+
     </div>
 </section>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800/50 backdrop-blur-sm py-12 border-t border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div>
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                <path d="M6.5 6.5h11v11h-11z"/>
-                                <path d="M6.5 6.5L2 2"/>
-                                <path d="M17.5 6.5L22 2"/>
-                                <path d="M6.5 17.5L2 22"/>
-                                <path d="M17.5 17.5L22 22"/>
-                            </svg>
-                        </div>
-                        <span class="text-white font-bold text-xl">RawFit</span>
-                    </div>
-                    <p class="text-gray-400 mb-4">Transform your body, transform your life. Join our fitness community and achieve your goals with expert guidance and state-of-the-art facilities.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37-4-4-4 4"/><path d="M21 16.5l-4-4-4 4"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Quick Links</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="#home" class="hover:text-orange-500 transition-colors">Home</a></li>
-                        <li><a href="#about" class="hover:text-orange-500 transition-colors">About</a></li>
-                        <li><a href="#programs" class="hover:text-orange-500 transition-colors">Programs</a></li>
-                        <li><a href="#trainers" class="hover:text-orange-500 transition-colors">Trainers</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Programs</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Strength Training</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Cardio Fitness</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Yoga Classes</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Personal Training</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Contact Info</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li>123 Fitness Street</li>
-                        <li>Gym City, GC 12345</li>
-                        <li>(555) 123-4567</li>
-                        <li>info@fitcoregym.com</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="mt-8 pt-8 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
-                <p class="text-gray-400">&copy; 2024 RawFit Gym. All rights reserved.</p>
-                <div class="flex space-x-4 mt-4 sm:mt-0">
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Privacy Policy</a>
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Terms of Service</a>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

@@ -1,3 +1,5 @@
+
+
 <?php
 session_start();
 if (!isset($_SESSION['trainer_id'])) {
@@ -140,81 +142,115 @@ unset($conv); // break reference
 </head>
 <body class="bg-gray-900 text-white">
     <div class="flex h-screen">
-        <!-- Conversations Sidebar: search + compact chat rows -->
-        <aside class="w-80 bg-gray-800 border-r border-gray-700 overflow-y-auto">
-            <div class="p-4 sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
+
+        
+        <!-- Conversations Sidebar: modern card-style -->
+        <aside class="w-96 bg-gradient-to-b from-gray-900/80 to-gray-800 border-r border-gray-700 overflow-y-auto p-4 space-y-4">
+            <div class="sticky top-0 bg-transparent pt-2 pb-3 z-20">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-lg font-bold text-orange-400">Conversations</h2>
-                    <button id="refreshConv" class="text-sm text-gray-400 hover:text-white">Refresh</button>
+                     <h1 class="text-3xl md:text-4xl font-extrabold p-3 pl-3 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 bg-clip-text text-transparent drop-shadow-md">
+                        Messages
+                        </h1>
+
+                    <button id="refreshConv" class="p-2 rounded-md text-gray-300 hover:bg-gray-800/60" title="Refresh">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 20v-5h-5"/></svg>
+                    </button>
                 </div>
-                <div class="relative">
-                    <input id="convSearch" type="search" placeholder="Search users or courses..." class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+
+                <div class="flex items-center gap-2">
+                    <input id="convSearch" type="search" placeholder="Search users or courses" class="flex-1 bg-gray-800/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
             </div>
 
-            <div id="convList" class="p-2 space-y-1">
-                <?php foreach ($conversations as $conv): 
+            <div id="convList" class="space-y-3 mt-3">
+                <?php foreach ($conversations as $conv):
                     $snippet = htmlspecialchars(mb_strimwidth($conv['last_message'] ?? '', 0, 80, '...'));
                     $time = !empty($conv['last_at']) ? date('M j H:i', strtotime($conv['last_at'])) : '';
                     $unread = intval($conv['unread_count']);
                 ?>
-                <div class="conv-row flex items-start gap-3 p-3 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors" 
-                     data-course="<?php echo intval($conv['course_id']); ?>" 
+                <div class="conv-row group bg-gray-800/30 hover:bg-gray-800/50 transition rounded-2xl p-3 cursor-pointer flex items-start gap-3"
+                     data-course="<?php echo intval($conv['course_id']); ?>"
                      data-user="<?php echo intval($conv['user_id']); ?>"
                      data-name="<?php echo htmlspecialchars($conv['user_name'], ENT_QUOTES); ?>"
                      data-course-title="<?php echo htmlspecialchars($conv['title'], ENT_QUOTES); ?>"
-                     onclick="loadChat('<?php echo intval($conv['course_id']); ?>', '<?php echo intval($conv['user_id']); ?>', '<?php echo htmlspecialchars(addslashes($conv['user_name'])); ?>', '<?php echo htmlspecialchars(addslashes($conv['title'])); ?>')">
-                    <div class="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center text-white font-semibold">
-                        <?php echo strtoupper(substr($conv['user_name'],0,1)); ?>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-center">
-                            <div class="truncate">
-                                <div class="text-sm font-semibold conv-name"><?php echo htmlspecialchars($conv['user_name']); ?></div>
-                                <div class="text-xs text-gray-400 conv-course truncate"><?php echo htmlspecialchars($conv['title']); ?></div>
-                            </div>
-                            <div class="text-right ml-3">
-                                <div class="text-xs text-gray-400"><?php echo $time; ?></div>
-                                <div class="mt-1 conv-unread"><?php if ($unread>0) echo '<span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-white bg-red-600 rounded-full">'.$unread.'</span>'; ?></div>
-                            </div>
+                     onclick="loadChat('<?php echo intval($conv['course_id']); ?>','<?php echo intval($conv['user_id']); ?>','<?php echo htmlspecialchars(addslashes($conv['user_name'])); ?>','<?php echo htmlspecialchars(addslashes($conv['title'])); ?>')">
+
+                    <div class="relative">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-500 text-white font-bold text-lg">
+                            <?= strtoupper(substr($conv['user_name'],0,1)) ?>
                         </div>
-                        <div class="mt-2 text-xs text-gray-300 conv-snippet truncate"><?php echo $snippet; ?></div>
+                        <div class="absolute -top-1 -right-1 conv-unread">
+                            <?php if ($unread>0): ?>
+                                <span class="inline-flex items-center justify-center w-6 h-6 text-xs font-semibold text-white bg-red-600 rounded-full"><?php echo $unread; ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+`                       <a href="trainerman.php" 
+                            class="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105 z-50"
+                            title="Back to Home">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H9.75A.75.75 0 009 15v6.25a.75.75 0 01-.75.75H3a1 1 0 01-1-1V9.75z" />
+                            </svg>
+                            </a>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="text-sm font-semibold conv-name truncate"><?php echo htmlspecialchars($conv['user_name']); ?></div>
+                                <div class="text-xs text-orange-300 conv-course truncate"><?php echo htmlspecialchars($conv['title']); ?></div>
+                            </div>
+                            <div class="text-xs text-gray-400"><?php echo $time; ?></div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-300 conv-snippet truncate"><?php echo $snippet; ?></p>
+                        <div class="mt-3 flex gap-2 text-xs">
+                            <span class="px-2 py-1 bg-gray-700/40 rounded-md text-gray-200">Last message</span>
+                            <?php if (!empty($conv['last_sender'])): ?>
+                                <span class="px-2 py-1 bg-gray-700/20 rounded-md text-gray-400"><?php echo htmlspecialchars($conv['last_sender']); ?></span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
             </div>
         </aside>
  
-         <!-- Chat Area: centered larger panel to match message.php UI -->
-         <div class="flex-1 flex items-stretch">
-            <div class="mx-auto w-full max-w-4xl p-6">
-                <div id="chat-panel" class="bg-gray-900/95 border border-gray-700 rounded-xl shadow-xl h-[78vh] flex flex-col overflow-hidden">
-                    <div id="chatHeader" class="p-4 border-b border-gray-700 flex items-center justify-between">
-                        <div>
-                            <div id="chatWithLabel" class="text-sm text-gray-400">No conversation selected</div>
-                            <div id="chatWithName" class="text-lg font-semibold text-white mt-1">Messages</div>
-                        </div>
-                    </div>
-                    
-                    <div id="messagesContainer" class="p-6 flex-1 overflow-y-auto space-y-4 bg-transparent">
-                        <div class="text-center text-gray-500">Select a conversation on the left to begin</div>
-                    </div>
- 
-                    <div class="p-4 border-t border-gray-700 bg-gray-800/40">
-                        <form id="messageForm" class="flex items-end gap-4">
-                            <input type="hidden" id="currentCourseId">
-                            <input type="hidden" id="currentUserId">
-                            <textarea id="messageContent" rows="3"
-                                class="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-4 text-white placeholder-gray-400 resize-none focus:ring-2 focus:ring-orange-500"
-                                placeholder="Write a reply..."></textarea>
-                            <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-xl font-semibold shadow">
-                                Send
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-         </div>
+       <!-- Chat Area: centered larger panel to match message.php UI -->
+<div class="flex-1 flex items-stretch h-full">
+  <div class=" w-full h-full max-w-5xl">
+    <div id="chat-panel" class="bg-gray-900/95 border border-gray-700 rounded-xl shadow-xl h-[100vh] flex flex-col overflow-hidden relative">
+      
+      <!-- Chat Header -->
+      <div id="chatHeader" class="p-4 border-b border-gray-700 flex items-center justify-between bg-gray-900/80 backdrop-blur-sm">
+        <div>
+          <div id="chatWithLabel" class="text-sm text-gray-400">No conversation selected</div>
+          <div id="chatWithName" class="text-lg font-semibold text-white mt-1">Messages</div>
+        </div>
+      </div>
+      
+      <!-- Messages Section (scrollable) -->
+      <div id="messagesContainer" class="p-6 flex-1 overflow-y-auto space-y-4 bg-transparent scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        <div class="text-center text-gray-500">Select a conversation on the left to begin</div>
+      </div>
+      
+      <!-- Message Input (fixed bottom) -->
+      <div class="p-4 border-t border-gray-700 bg-gray-800/40">
+        <form id="messageForm" class="flex items-end gap-4">
+          <input type="hidden" id="currentCourseId">
+          <input type="hidden" id="currentUserId">
+          
+          <textarea id="messageContent" rows="2"
+            class="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-4 text-white placeholder-gray-400 resize-none focus:ring-2 focus:ring-orange-500"
+            placeholder="Write a reply..."></textarea>
+          
+          <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-xl font-semibold shadow transition">
+            Send
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
      </div>
  
      <script>
@@ -236,11 +272,11 @@ unset($conv); // break reference
        // mark selected conversation in the sidebar (uses .conv-row and data-course/data-user)
        markActiveConversation(currentChatInfo.courseId, currentChatInfo.userId);
      }
- 
-     async function loadMessages() {
-        if (!currentChatInfo.courseId || !currentChatInfo.userId) return;
-        const container = document.getElementById('messagesContainer');
-        container.innerHTML = '<div class="text-gray-400">Loading...</div>';
+        
+        async function loadMessages(silent = false) {
+            if (!currentChatInfo.courseId || !currentChatInfo.userId) return;
+            const container = document.getElementById('messagesContainer');
+            if (!silent) container.innerHTML = '<div class="text-gray-400">Loading...</div>';
         try {
             // use local AJAX endpoint to ensure scoping to trainer session
             const res = await fetch(`trainer_messages.php?ajax=1&action=fetch_messages&course_id=${currentChatInfo.courseId}&user_id=${currentChatInfo.userId}`);
@@ -264,6 +300,19 @@ unset($conv); // break reference
             console.error('loadMessages err', err);
             container.innerHTML = '<div class="text-gray-400">Failed to load messages</div>';
         }
+        const messages = data.messages || [];
+const newHtml = messages.map(msg => {
+    const side = (msg.sender_type === 'trainer') ? 'justify-end' : 'justify-start';
+    const bubbleBg = (msg.sender_type === 'trainer') ? 'bg-orange-500/20' : 'bg-gray-700/50';
+    const who = (msg.sender_type === 'trainer') ? 'You' : (msg.user_name || 'User');
+    return `<div class="flex ${side}"><div class="max-w-[90%] ${bubbleBg} rounded-lg p-4"><div class="text-sm font-semibold ${(msg.sender_type === 'trainer') ? 'text-orange-400' : 'text-blue-400'}">${escapeHtml(who)}</div><div class="text-white mt-1">${escapeHtml(msg.message)}</div><div class="text-xs text-gray-400 mt-1">${escapeHtml(new Date(msg.created_at).toLocaleString())}</div></div></div>`;
+}).join('');
+
+if (container.innerHTML !== newHtml) {
+    container.innerHTML = newHtml;
+    container.scrollTop = container.scrollHeight;
+}
+
      }
  
      // send reply - use local AJAX

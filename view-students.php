@@ -2,33 +2,6 @@
 session_start();
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Database connection
 $conn = new mysqli("localhost", "root", "", "rawfit");
 if ($conn->connect_error) {
@@ -51,6 +24,42 @@ $stmt->close();
 
 $conn->close();
 ?>
+    <?php
+session_start();
+
+// Check login
+if (!isset($_SESSION['trainer_id'])) {
+    header("Location: trainer_login.php");
+    exit();
+}
+
+// Database connection
+$host = 'localhost';
+$dbname = 'rawfit';
+$username = 'root';
+$password = '';
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
+}
+
+// ✅ Fetch trainer details for navbar
+$trainer_id = $_SESSION['trainer_id'];
+$stmt = $pdo->prepare("SELECT name, trainer_image FROM trainer_details WHERE id = ?");
+$stmt->execute([$trainer_id]);
+$trainer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Default image fallback
+if (!$trainer || empty($trainer['trainer_image'])) {
+    $trainer['trainer_image'] = 'default-avatar.png';
+}
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -110,24 +119,35 @@ $conn->close();
                     </a>
                 </div>
 
-                <!-- User Info -->
-                <div class="relative flex items-center space-x-4">
-                    <div class="hidden sm:block text-right">
-                        <p class="text-white font-medium" id="userName"><?php echo htmlspecialchars($trainer_name); ?></p>
-                        <p class="text-gray-400 text-sm"><?php echo htmlspecialchars($trainer_email); ?></p>
-                        <p class="text-gray-400 text-sm"><?php echo htmlspecialchars($trainer_phone); ?></p>
-                    </div>
-                    <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center cursor-pointer" id="profileButton">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
+              
+                     <!-- Profile Menu -->
+                <div class="relative">
+                    <button id="profile-menu-button" class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                      <img class="h-8 w-8 rounded-full object-cover"
+                                        src="uploads/<?php echo htmlspecialchars($trainer['trainer_image']); ?>"
+                                        alt="<?php echo htmlspecialchars($trainer['name']); ?>">
+                                    <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
-                    </div>
+                    </button>
+                    
                     <!-- Dropdown Menu -->
-                    <div id="profileDropdown" class="absolute top-full right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-md border border-gray-700 rounded-lg shadow-lg hidden z-50">
-                        <a href="profile.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">View Profile</a>
-                        <a href="logout.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">Logout</a>
+                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 py-1 z-50">
+                        <a href="trainer_profile.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+                            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            View Profile
+                        </a>
+                        <a href="logout.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors">
+                            <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Sign Out
+                        </a>
                     </div>
+                </div>
                 </div>
             </div>
 
@@ -171,104 +191,56 @@ $conn->close();
 
             <!-- Students table removed; page now shows only downloaders -->
 
-            <!-- All Downloaders -->
-            <div class="mt-6 bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-gray-700">
-                <h2 class="text-xl font-semibold text-white mb-4">All Downloaders</h2>
-                <?php
-                // Fetch all downloaders for this trainer's courses
-                $dconn = new mysqli("localhost", "root", "", "rawfit");
-                if ($dconn->connect_error) {
-                    echo '<p class="text-gray-400">Could not load downloaders</p>';
-                } else {
-                    $sql = "SELECT cd.downloaded_at, r.name as user_name, tc.title as course_title
-                            FROM course_downloads cd
-                            JOIN trainer_courses tc ON tc.id = cd.course_id
-                            JOIN register r ON r.id = cd.user_id
-                            WHERE tc.trainer_id = ?
-                            ORDER BY cd.downloaded_at DESC";
-                    if ($s = $dconn->prepare($sql)) {
-                        $s->bind_param('i', $trainer_id);
-                        $s->execute();
-                        $res = $s->get_result();
-                        if ($res && $res->num_rows > 0) {
-                            echo '<div class="space-y-3">';
-                            while ($dl = $res->fetch_assoc()) {
-                                $time = date('M j, Y H:i', strtotime($dl['downloaded_at']));
-                                echo "<div class=\"p-3 bg-gray-700/30 rounded-lg\"><div class=\"font-medium text-white\">" . htmlspecialchars($dl['user_name']) . "</div><div class=\"text-gray-400 text-xs\">Downloaded: " . htmlspecialchars($dl['course_title']) . " — $time</div></div>";
-                            }
-                            echo '</div>';
-                        } else {
-                            echo '<p class="text-gray-400">No downloads recorded yet.</p>';
-                        }
-                        $s->close();
-                    } else {
-                        echo '<p class="text-gray-400">Downloaders not available (table may be missing)</p>';
-                    }
-                    $dconn->close();
+           <!-- All Downloaders -->
+<div class="mt-6 bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-gray-700">
+    <h2 class="text-xl font-semibold text-white mb-4">All Downloaders</h2>
+    <?php
+    // Fetch unique downloaders with latest download time
+    $dconn = new mysqli("localhost", "root", "", "rawfit");
+    if ($dconn->connect_error) {
+        echo '<p class="text-gray-400">Could not load downloaders</p>';
+    } else {
+        $sql = "SELECT 
+                    MAX(cd.downloaded_at) AS latest_download,
+                    r.name AS user_name
+                FROM course_downloads cd
+                JOIN trainer_courses tc ON tc.id = cd.course_id
+                JOIN register r ON r.id = cd.user_id
+                WHERE tc.trainer_id = ?
+                GROUP BY cd.user_id
+                ORDER BY latest_download DESC";
+
+        if ($s = $dconn->prepare($sql)) {
+            $s->bind_param('i', $trainer_id);
+            $s->execute();
+            $res = $s->get_result();
+
+            if ($res && $res->num_rows > 0) {
+                echo '<div class="space-y-3">';
+                while ($dl = $res->fetch_assoc()) {
+                    $time = date('M j, Y H:i', strtotime($dl['latest_download']));
+                    echo "<div class=\"p-3 bg-gray-700/30 rounded-lg\">
+                            <div class=\"font-medium text-white\">" . htmlspecialchars($dl['user_name']) . "</div>
+                            <div class=\"text-gray-400 text-xs\">Last Download: $time</div>
+                          </div>";
                 }
-                ?>
-            </div>
+                echo '</div>';
+            } else {
+                echo '<p class="text-gray-400">No downloads recorded yet.</p>';
+            }
+            $s->close();
+        } else {
+            echo '<p class="text-gray-400">Downloaders not available (table may be missing)</p>';
+        }
+        $dconn->close();
+    }
+    ?>
+</div>
+
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800/50 backdrop-blur-sm py-12 border-t border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div>
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                <path d="M6.5 6.5h11v11h-11z"/>
-                                <path d="M6.5 6.5L2 2"/>
-                                <path d="M17.5 6.5L22 2"/>
-                                <path d="M6.5 17.5L2 22"/>
-                                <path d="M17.5 17.5L22 22"/>
-                            </svg>
-                        </div>
-                        <span class="text-white font-bold text-xl">RawFit</span>
-                    </div>
-                    <p class="text-gray-400 mb-4">Transform your body, transform your life. Join our fitness community and achieve your goals with expert guidance and state-of-the-art facilities.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37-4-4-4 4"/><path d="M21 16.5l-4-4-4 4"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Support</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">FAQ</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Contact Us</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Terms of Service</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Privacy Policy</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Contact Info</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li>123 Fitness Street</li>
-                        <li>FitCity, GC 12345</li>
-                        <li>(555) 123-4567</li>
-                        <li>info@rawfitgym.com</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="mt-8 pt-8 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
-                <p class="text-gray-400">&copy; 2025 RawFit Gym. All rights reserved.</p>
-                <div class="flex space-x-4 mt-4 sm:mt-0">
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Privacy Policy</a>
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Terms of Service</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

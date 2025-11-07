@@ -3,13 +3,11 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
 
-// Database connection
 $conn = new mysqli("localhost", "root", "", "rawfit");
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// CSRF token
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -24,7 +22,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
         $form_type = $_POST['form_type'] ?? "";
 
-        // LOGIN
         if ($form_type === "login") {
             $username = trim($_POST['username'] ?? '');
             $password = $_POST['password'] ?? '';
@@ -58,10 +55,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
                 $stmt->close();
             }
-        }
-
-        // REGISTER
-        elseif ($form_type === "register") {
+        } elseif ($form_type === "register") {
             $username = trim($_POST['username'] ?? '');
             $password = $_POST['password'] ?? '';
             $secret_code = trim($_POST['secret_code'] ?? '');
@@ -71,7 +65,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } elseif ($secret_code !== "RAWFITADMIN") {
                 $error = "Invalid secret code.";
             } else {
-                // Check duplicate
                 $stmt = $conn->prepare("SELECT admin_id FROM admins WHERE username = ?");
                 $stmt->bind_param("s", $username);
                 $stmt->execute();
@@ -97,71 +90,129 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Login - RawFit</title>
-    <style>
-        body { background-color: #000; font-family: 'Inter', sans-serif; margin: 0; padding: 0; color: #fff; }
-        .container { max-width: 400px; margin: 100px auto; background: #1A1F2E; padding: 20px; border-radius: 12px; }
-        h2 { text-align: center; color: #F97316; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: none; background: #2D2D2D; color: #fff; }
-        button { width: 100%; padding: 10px; background: #F97316; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #FBA63C; }
-        .toggle-link { text-align: center; display: block; margin-top: 10px; color: #3B82F6; cursor: pointer; }
-        .error { color: #EF4444; text-align: center; }
-        .success { color: #22C55E; text-align: center; }
-    </style>
+<meta charset="UTF-8">
+<title>Admin Access - RawFit</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<div class="container">
-    <h2 id="formTitle">Admin Login</h2>
+<body class="bg-gray-950 flex items-center justify-center min-h-screen font-[Inter]">
 
-    <?php if (!empty($error)) echo "<p class='error'>$error</p>"; ?>
-    <?php if (!empty($success)) echo "<p class='success'>$success</p>"; ?>
+<!-- Glassmorphic Container -->
+<div class="bg-gray-900/70 backdrop-blur-lg border border-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8 space-y-6 transition-all duration-300">
 
-    <!-- LOGIN FORM -->
-    <form method="POST" id="loginForm">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" name="form_type" value="login">
-        <input type="text" name="username" placeholder="Admin Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-    </form>
+  <!-- Header -->
+  <div class="text-center">
+    <h1 id="formTitle" class="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">Admin Login</h1>
+    <p class="text-gray-400 text-sm mt-1">Access RawFit control panel securely</p>
+  </div>
 
-    <!-- REGISTER FORM -->
-    <form method="POST" id="registerForm" style="display:none;">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" name="form_type" value="register">
-        <input type="text" name="username" placeholder="New Admin Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <input type="text" name="secret_code" placeholder="Enter Admins Code "required>
-        <button type="submit">Register</button>
-    </form>
+  <!-- Feedback -->
+  <?php if (!empty($error)): ?>
+    <div class="text-red-400 text-center text-sm bg-red-500/10 py-2 rounded-lg"><?= htmlspecialchars($error) ?></div>
+  <?php endif; ?>
+  <?php if (!empty($success)): ?>
+    <div class="text-green-400 text-center text-sm bg-green-500/10 py-2 rounded-lg"><?= htmlspecialchars($success) ?></div>
+  <?php endif; ?>
 
-    <span class="toggle-link" onclick="toggleForms()">Don’t have an account? Register</span>
+  <!-- Login Form -->
+  <form method="POST" id="loginForm" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
+    <input type="hidden" name="form_type" value="login">
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+      <input type="text" name="username" placeholder="Enter admin username" required
+             class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+      <div class="relative">
+        <input type="password" name="password" id="loginPassword" placeholder="Enter password" required
+               class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
+        <button type="button" onclick="togglePassword('loginPassword')" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-orange-400">
+          👁️
+        </button>
+      </div>
+    </div>
+
+    <button type="submit"
+            class="w-full flex justify-center items-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600
+                   text-white font-semibold rounded-lg shadow-lg shadow-orange-500/20 transform hover:scale-[1.02] transition-all">
+      🔐 Login Securely
+    </button>
+  </form>
+
+  <!-- Register Form -->
+  <form method="POST" id="registerForm" class="space-y-5 hidden">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
+    <input type="hidden" name="form_type" value="register">
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">New Username</label>
+      <input type="text" name="username" placeholder="Create admin username" required
+             class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+      <div class="relative">
+        <input type="password" name="password" id="registerPassword" placeholder="Create password" required
+               class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
+        <button type="button" onclick="togglePassword('registerPassword')" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-orange-400">
+          👁️
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Admin Secret Code</label>
+      <input type="text" name="secret_code" placeholder="Enter Admin Code" required
+             class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
+    </div>
+
+    <button type="submit"
+            class="w-full flex justify-center items-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600
+                   text-white font-semibold rounded-lg shadow-lg shadow-orange-500/20 transform hover:scale-[1.02] transition-all">
+      🚀 Register Admin
+    </button>
+  </form>
+
+  <!-- Toggle -->
+  <div class="text-center">
+    <button onclick="toggleForms()" class="text-sm text-orange-400 hover:text-orange-300 transition">
+      Don’t have an account? Register
+    </button>
+  </div>
+
+  <p class="text-center text-gray-500 text-xs mt-4">© <?= date('Y'); ?> RawFit. All rights reserved.</p>
 </div>
 
 <script>
 function toggleForms() {
-    const login = document.getElementById("loginForm");
-    const register = document.getElementById("registerForm");
-    const title = document.getElementById("formTitle");
-    const link = document.querySelector(".toggle-link");
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+  const title = document.getElementById("formTitle");
+  const toggleBtn = document.querySelector("button[onclick='toggleForms()']");
 
-    if (login.style.display === "none") {
-        login.style.display = "block";
-        register.style.display = "none";
-        title.innerText = "Admin Login";
-        link.innerText = "Don’t have an account? Register";
-    } else {
-        login.style.display = "none";
-        register.style.display = "block";
-        title.innerText = "Admin Register";
-        link.innerText = "Already have an account? Login";
-    }
+  if (loginForm.classList.contains("hidden")) {
+    loginForm.classList.remove("hidden");
+    registerForm.classList.add("hidden");
+    title.innerText = "Admin Login";
+    toggleBtn.innerText = "Don’t have an account? Register";
+  } else {
+    loginForm.classList.add("hidden");
+    registerForm.classList.remove("hidden");
+    title.innerText = "Admin Register";
+    toggleBtn.innerText = "Already have an account? Login";
+  }
+}
+
+function togglePassword(id) {
+  const input = document.getElementById(id);
+  input.type = input.type === "password" ? "text" : "password";
 }
 </script>
 </body>
