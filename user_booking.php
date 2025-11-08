@@ -221,7 +221,7 @@ $conn->close();
         </div>
     </div>
 </nav>
-
+    <br><br>
 <main class="pt-24 min-h-screen p-4 sm:p-6 lg:p-8">
   <div class="max-w-7xl mx-auto">
     <?php if ($course && $trainer): ?>

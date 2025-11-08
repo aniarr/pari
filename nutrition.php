@@ -446,12 +446,7 @@ $conn->close();
                         </select>
                     </div>
                  </div>
-                 <div class="grid grid-cols-3 gap-4 ">
-                            <div>
-                            <label class="block text-gray-300 font-medium mb-2">Serving</label>
-                            <div id="foodServingInfo" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-gray-300">-</div>
-                        </div>
-                </div>
+                
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-gray-300 font-medium mb-2">Carbs (g)</label>

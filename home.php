@@ -200,7 +200,43 @@ $conn->close();
                             </svg>
                         </div>
                     </div>
-                    <div onclick="window.location.href='upload_reel.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
+                     <div onclick="window.location.href='feed.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-r from-pink-500 to-red-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="16"/>
+                                <line x1="8" y1="12" x2="16" y2="12"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Watch Bitz</h3>
+                        <p class="text-gray-400 leading-relaxed">Explore and enjoy Bitz from the RawFit community</p>
+                        <div class="mt-6 flex items-center text-orange-500 group-hover:text-orange-400 transition-colors">
+                            <span class="font-medium">Browse Bitz</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2 group-hover:translate-x-1 transition-transform">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </div>
+                     
+                    <div onclick="window.location.href='display_gym.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
+                            <div class="w-16 h-16 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                                    <path d="M3 12h4l1.5-6 3 12 3-9 1.5 6h4"/>
+                                    <path d="M8 22v-6m8 6v-6"/>
+                                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Find Gyms Nearby</h3>
+                            <p class="text-gray-400 leading-relaxed">Discover top-rated gyms, view facilities, check timings, and book your workout sessions instantly</p>
+                            <div class="mt-6 flex items-center text-orange-500 group-hover:text-orange-400 transition-colors">
+                                <span class="font-medium">Explore Now</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2 group-hover:translate-x-1 transition-transform">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    
+                   <div onclick="window.location.href='upload_reel.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
                         <div class="w-16 h-16 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
                                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -219,41 +255,6 @@ $conn->close();
                             </svg>
                         </div>
                     </div> 
-                    <div onclick="window.location.href='display_gym.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
-                            <div class="w-16 h-16 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                    <path d="M3 12h4l1.5-6 3 12 3-9 1.5 6h4"/>
-                                    <path d="M8 22v-6m8 6v-6"/>
-                                    <rect x="2" y="4" width="20" height="16" rx="2"/>
-                                </svg>
-                            </div>
-                            <h3 class="text-xl font-semibold text-white mb-2">Find Gyms Nearby</h3>
-                            <p class="text-gray-400 leading-relaxed">Discover top-rated gyms, view facilities, check timings, and book your workout sessions instantly</p>
-                            <div class="mt-6 flex items-center text-orange-500 group-hover:text-orange-400 transition-colors">
-                                <span class="font-medium">Explore Now</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2 group-hover:translate-x-1 transition-transform">
-                                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                                </svg>
-                            </div>
-                        </div>
-                    <div onclick="window.location.href='feed.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
-                        <div class="w-16 h-16 rounded-xl bg-gradient-to-r from-pink-500 to-red-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="12" y1="8" x2="12" y2="16"/>
-                                <line x1="8" y1="12" x2="16" y2="12"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white mb-2">Watch Bitz</h3>
-                        <p class="text-gray-400 leading-relaxed">Explore and enjoy Bitz from the RawFit community</p>
-                        <div class="mt-6 flex items-center text-orange-500 group-hover:text-orange-400 transition-colors">
-                            <span class="font-medium">Browse Bitz</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2 group-hover:translate-x-1 transition-transform">
-                                <path d="M5 12h14M12 5l7 7-7 7"/>
-                            </svg>
-                        </div>
-                    </div>
-                   
                 </div>
             </div>
 
