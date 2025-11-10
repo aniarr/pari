@@ -35,10 +35,10 @@ $result = $stmt->get_result();
 
 
 $nutritionData = [
-    'age' => 25,
-    'gender' => 'male',
-    'weight' => 70,
-    'height' => 175,
+    'age' => 0,
+    'gender' => '',
+    'weight' => 0,
+    'height' => 0,
     'activity_level' => 'moderate',
     'goal' => 'maintain'
 ];
@@ -614,7 +614,7 @@ $conn->close();
         }
 
         function calculateNutritionRequirements() {
-            const age = parseInt(document.getElementById('age').value) || 25;
+            const age = parseInt(document.getElementById('age').value) || 0;
             const weight = parseFloat(document.getElementById('weight').value) || 70;
             const height = parseInt(document.getElementById('height').value) || 175;
             const gender = document.getElementById('gender').value;

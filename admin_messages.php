@@ -324,7 +324,7 @@ if (profileButton && profileDropdown) {
 <main class="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto animate-fade-in">
  <!-- Header -->
                 <div class="text-center mb-10 p-4">
-        <h2 class="text-4xl sm:text-5xl font-bold font-display gradient-text mb-3">Manage Users</h2>
+        <h2 class="text-4xl sm:text-5xl font-bold font-display gradient-text mb-3">Customer Support</h2>
         <p class="text-gray-400">View, edit, or delete user accounts</p>
     </div>
     <!-- Alert -->

@@ -180,31 +180,170 @@ if (!$result) die("Query failed: " . $conn->error);
 
 <!-- Navigation -->
 <nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-16">
-      <div class="flex items-center space-x-3">
-        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-            <path d="M6.5 6.5h11v11h-11z"/>
-            <path d="M6.5 6.5L2 2M17.5 6.5L22 2M6.5 17.5L2 22M17.5 17.5L22 22"/>
-          </svg>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                        <path d="M6.5 6.5h11v11h-11z"/>
+                        <path d="M6.5 6.5L2 2"/>
+                        <path d="M17.5 6.5L22 2"/>
+                        <path d="M6.5 17.5L2 22"/>
+                        <path d="M17.5 17.5L22 22"/>
+                    </svg>
+                </div>
+                <span class="text-white font-bold text-xl">RawFit</span>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="home.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="nutrition.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                        <path d="M12 18h.01"/>
+                    </svg>
+                    <span>Nutrition</span>
+                </a>
+                <a href="trainer.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span>Trainers</span>
+                </a>
+                <a href="display_gym.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                        <path d="M12 18h.01"/>
+                    </svg>
+                    <span>Gyms</span>
+                </a>
+                  <a href="workout_view.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                            <path d="M12 18h.01"/>
+                        </svg>
+                        <span>Workout</span>
+                    </a> 
+            </div>
+
+            <!-- User Info -->
+            <div class="relative flex items-center space-x-4">
+                <div class="hidden sm:block text-right">
+                </div>
+                <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center cursor-pointer" id="profileButton">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+
+                <!-- Dropdown Menu -->
+                <div id="profileDropdown" class="absolute top-full right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-md border border-gray-700 rounded-lg shadow-lg hidden z-50">
+                    <a href="profile.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">View Profile</a>
+                    <a href="logout.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">Logout</a>
+                </div>
+            </div>
         </div>
-        <span class="text-white font-bold text-xl">RawFit</span>
-      </div>
-      <div class="hidden md:flex space-x-6 text-sm">
-        <a href="home.php" class="text-gray-300 hover:text-orange-500 transition">Home</a>
-        <a href="upload_reel.php" class="text-gray-300 hover:text-orange-500 transition">Upload</a>
-        <a href="logout.php" class="text-gray-300 hover:text-orange-500 transition">Logout</a>
-      </div>
-      <div class="md:hidden flex space-x-4 text-xl">
-        <a href="home.php">Home</a>
-        <a href="upload_reel.php">Upload</a>
-        <a href="logout.php">Exit</a>
-      </div>
+
+        <!-- Mobile Navigation -->
+        <div class="md:hidden flex items-center justify-around py-3 border-t border-gray-800">
+            <a href="home.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-orange-500">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9,22 9,12 15,12 15,22"/>
+                </svg>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="nutrition.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                    <path d="M12 18h.01"/>
+                </svg>
+                <span class="text-xs">Nutrition</span>
+            </a>
+            <a href="trainer.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span class="text-xs">Trainers</span>
+            </a>
+                 <a href="workout_view.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                            <path d="M12 18h.01"/>
+                        </svg>
+                        <span>Workout</span>
+                    </a>
+        </div>
     </div>
-  </div>
 </nav>
 
+<script>
+      document.addEventListener('DOMContentLoaded', function() {
+          updateNavigation();
+      });
+
+      // Highlight active link
+      function updateNavigation() {
+          const currentPage = window.location.pathname.split('/').pop();
+          const navLinks = document.querySelectorAll('.nav-link');
+          const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+          [...navLinks, ...mobileNavLinks].forEach(link => {
+              link.classList.remove('active', 'bg-orange-500', 'text-white', 'text-orange-500');
+              link.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
+          });
+
+          if (currentPage === 'index.php' || currentPage === 'home.php' || currentPage === '') {
+              const homeLinks = document.querySelectorAll('a[href="home.php"], a[href="index.php"]');
+              homeLinks.forEach(link => {
+                  if (link.classList.contains('mobile-nav-link')) {
+                      link.classList.add('active', 'text-orange-500');
+                      link.classList.remove('text-gray-400');
+                  } else {
+                      link.classList.add('active', 'bg-orange-500', 'text-white');
+                      link.classList.remove('text-gray-300');
+                  }
+              });
+          }
+      }
+
+      // Profile dropdown toggle
+      const profileButton = document.getElementById('profileButton');
+      const profileDropdown = document.getElementById('profileDropdown');
+
+      if (profileButton && profileDropdown) {
+          profileButton.addEventListener('click', function(e) {
+              e.preventDefault();
+              profileDropdown.classList.toggle('hidden');
+          });
+
+          document.addEventListener('click', function(e) {
+              if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
+                  profileDropdown.classList.add('hidden');
+              }
+          });
+      }
+</script>
+     <a href="index.php" 
+                            class="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105 z-50"
+                            title="Back to Home">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H9.75A.75.75 0 009 15v6.25a.75.75 0 01-.75.75H3a1 1 0 01-1-1V9.75z" />
+                            </svg>
+                            </a>
 <!-- Reels Feed -->
 <main class="snap-container scrollbar-hide">
   <?php if ($result && $result->num_rows > 0): ?>

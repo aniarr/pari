@@ -53,7 +53,7 @@ $totalSplits = $stmt->fetchColumn();
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: home.php");
+    header("Location: auth.php");
     exit();
 }
 

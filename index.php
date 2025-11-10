@@ -67,18 +67,13 @@ $conn->close();
                         </svg>
                         <span>Home</span>
                     </a>
-                    <a href="#about" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
-                        </svg>
-                        <span>About</span>
-                    </a>
+                  
                     <a href="#programs" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                             <polyline points="22,4 12,14.01 9,11.01"/>
                         </svg>
-                        <span>Programs</span>
+                        <span>Courses</span>
                     </a>
                   
                    
@@ -153,7 +148,7 @@ $conn->close();
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                         <polyline points="22,4 12,14.01 9,11.01"/>
                     </svg>
-                    <span class="text-xs">Programs</span>
+                    <span class="text-xs">Courses</span>
                 </a>
          
                 <a href="#contact" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400">
@@ -316,18 +311,7 @@ $conn->close();
                     Ready to start your fitness journey? Contact us today for a free consultation and gym tour.
                 </p>
                 <div class="space-y-4">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="text-white font-semibold">Location</h4>
-                            <p class="text-gray-400">123 Fitness Street, Gym City, GC 12345</p>
-                        </div>
-                    </div>
+                   
                     <div class="flex items-center space-x-4">
                         <div class="w-12 h-12 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">

@@ -106,10 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="hidden md:flex space-x-10">
-        <a href="owner_home.php" class="text-orange-400 hover:text-orange-300 font-semibold transition flex items-center gap-2">
+        <a href="Manage_Gyms.php" class="text-orange-400 hover:text-orange-300 font-semibold transition flex items-center gap-2">
           <i class="fas fa-home"></i> Home
         </a>
-        <a href="display_gym.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
+        <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
           <i class="fas fa-dumbbell"></i> View Gyms
         </a>
       </div>

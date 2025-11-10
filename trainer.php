@@ -5,7 +5,7 @@ session_start();
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: auth.php");
     exit();
 }
 
@@ -270,10 +270,7 @@ $conn->close();
                                 View Details
                             </a>
 
-                            <button type="button" onclick="bookTrainer('<?php echo addslashes(htmlspecialchars($trainer['name'])); ?>','<?php echo addslashes(htmlspecialchars($trainer['specialty'])); ?>', '<?php echo (int)$trainer['price']; ?>')"
-                                    class="w-36 bg-emerald-600 hover:bg-emerald-700 rounded-lg py-3 px-3 font-semibold transition">
-                                Book
-                            </button>
+                          
                         </div>
                     </div>
                 </div>
@@ -281,44 +278,6 @@ $conn->close();
         <?php endif; ?>
     </div>
 
-    <!-- Booking Modal -->
-    <div id="bookingModal" class="fixed inset-0 z-60 flex items-center justify-center bg-black/60 hidden">
-        <div class="w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-xl">
-            <div class="p-6">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <h2 id="modalTrainerName" class="text-2xl font-bold text-white">Trainer</h2>
-                        <p id="modalTrainerSpecialty" class="text-gray-400">Specialty</p>
-                    </div>
-                    <button onclick="closeBookingModal()" class="text-gray-400 hover:text-white">&times;</button>
-                </div>
-
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm text-gray-300 mb-1">Date</label>
-                        <input id="sessionDate" type="date" class="w-full bg-gray-800/60 border border-gray-700 px-3 py-2 rounded text-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-300 mb-1">Time</label>
-                        <input id="sessionTime" type="time" class="w-full bg-gray-800/60 border border-gray-700 px-3 py-2 rounded text-white">
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-sm text-gray-300 mb-1">Notes (optional)</label>
-                    <textarea id="sessionNotes" rows="4" class="w-full bg-gray-800/60 border border-gray-700 px-3 py-2 rounded text-white" placeholder="Any preferences or details..."></textarea>
-                </div>
-
-                <div class="mt-6 flex items-center justify-between">
-                    <div id="modalTrainerPrice" class="text-gray-300 font-semibold">$0/session</div>
-                    <div class="flex items-center gap-3">
-                        <button onclick="closeBookingModal()" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">Cancel</button>
-                        <button onclick="confirmBooking()" class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold">Confirm Booking</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Back to Top -->
     <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
