@@ -239,28 +239,135 @@ $conn->close();
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Personal Information -->
                         <div>
-                            <label class="block text-gray-300 mb-2" for="name">Full Name</label>
+                            <label class="block text-gray-300 mb-2" for="name">Full Name(use the same name from registration)</label>
                             <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($userData['name']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="email">Email</label>
-                            <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($userData['email']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                           <label class="block text-gray-300 mt-4 mb-2" for="email">Email</label>
+                                <input 
+                                    type="email" 
+                                    name="email" 
+                                    id="email" 
+                                    value="<?php echo htmlspecialchars($userData['email'] ?? ''); ?>" 
+                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['email']) ? 'border-red-500' : 'border-transparent'; ?>" 
+                                    placeholder="you@example.com"
+                                    required
+                                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                                    title="Please enter a valid email address (e.g., user@domain.com)"
+                                    aria-describedby="email-error"
+                                >
+
+                                <?php if (!empty($errors['email'])): ?>
+                                    <p id="email-error" class="text-red-400 text-sm mt-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <?php echo htmlspecialchars($errors['email']); ?>
+                                    </p>
+                                <?php endif; ?>
                             <label class="block text-gray-300 mt-4 mb-2" for="phone">Phone</label>
-                            <input type="tel" name="phone" id="phone" value="<?php echo htmlspecialchars($userData['phone']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                                <input 
+                                    type="tel" 
+                                    name="phone" 
+                                    id="phone" 
+                                    value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>" 
+                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['phone']) ? 'border-red-500' : 'border-transparent'; ?>" 
+                                    placeholder="1234567890"
+                                    required
+                                    pattern="[0-9]{10}"
+                                    maxlength="10"
+                                    inputmode="numeric"
+                                    title="Please enter exactly 10 digits (e.g., 9876543210)"
+                                    aria-describedby="phone-error"
+                                >
+
+                                <?php if (!empty($errors['phone'])): ?>
+                                    <p id="phone-error" class="text-red-400 text-sm mt-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <?php echo htmlspecialchars($errors['phone']); ?>
+                                    </p>
+                                <?php endif; ?>
                             <label class="block text-gray-300 mt-4 mb-2" for="address">Address</label>
                             <input type="text" name="address" id="address" value="<?php echo htmlspecialchars($userData['address']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
                             <label class="block text-gray-300 mt-4 mb-2" for="age">Age</label>
-                            <input type="number" name="age" id="age" value="<?php echo htmlspecialchars($userData['age']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                                <input 
+                                    type="number" 
+                                    name="age" 
+                                    id="age" 
+                                    value="<?php echo htmlspecialchars($userData['age'] ?? ''); ?>" 
+                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['age']) ? 'border-red-500' : 'border-transparent'; ?>" 
+                                    placeholder="25"
+                                    required
+                                    min="18"
+                                    max="100"
+                                    step="1"
+                                    inputmode="numeric"
+                                    title="Age must be between 18 and 100 years."
+                                    aria-describedby="age-error"
+                                >
+
+                                <?php if (!empty($errors['age'])): ?>
+                                    <p id="age-error" class="text-red-400 text-sm mt-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <?php echo htmlspecialchars($errors['age']); ?>
+                                    </p>
+                                <?php endif; ?>
                             <label class="block text-gray-300 mt-4 mb-2" for="dob">Date of Birth</label>
                             <input type="date" name="dob" id="dob" value="<?php echo htmlspecialchars($userData['dob']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="blood_group">Blood Group</label>
-                            <input type="text" name="blood_group" id="blood_group" value="<?php echo htmlspecialchars($userData['blood_group']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                        <label class="block text-gray-300 mt-4 mb-2" for="blood_group">Blood Group</label>
+
+                            <select name="blood_group" id="blood_group"
+                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                                <option value="">-- Select Blood Group --</option>
+
+                                <?php
+                                // List of valid blood groups
+                                $bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+                                // Current value from DB (make sure it is sanitized)
+                                $current = $userData['blood_group'] ?? '';
+
+                                foreach ($bloodGroups as $group) {
+                                    $selected = ($current === $group) ? 'selected' : '';
+                                    echo "<option value=\"" . htmlspecialchars($group) . "\" $selected>" . htmlspecialchars($group) . "</option>";
+                                }
+                                ?>
+                            </select>
                         </div>
 
                         <!-- Additional Details -->
                         <div>
                             <label class="block text-gray-300 mb-2" for="location">Location</label>
                             <input type="text" name="location" id="location" value="<?php echo htmlspecialchars($userData['location']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="gender">Gender/Pronouns</label>
-                            <input type="text" name="gender" id="gender" value="<?php echo htmlspecialchars($userData['gender']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                           <label class="block text-gray-300 mt-4 mb-2" for="gender">Gender / Pronouns</label>
+
+                                <select name="gender" id="gender"
+                                        class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                                        required>
+                                    <option value="">-- Select --</option>
+
+                                    <?php
+                                    // -----------------------------------------------------------------
+                                    //  Options you want to offer.  Add/remove as needed.
+                                    // -----------------------------------------------------------------
+                                    $options = [
+                                        'Male',
+                                        'Female'
+                                       
+                                      
+                                    ];
+
+                                    $current = $userData['gender'] ?? '';
+
+                                    foreach ($options as $opt) {
+                                        $selected = ($current === $opt) ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($opt) . '" ' . $selected . '>'
+                                            . htmlspecialchars($opt) . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             <label class="block text-gray-300 mt-4 mb-2" for="interests">Interests/Hobbies</label>
                             <input type="text" name="interests" id="interests" value="<?php echo htmlspecialchars($userData['interests']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
                             <label class="block text-gray-300 mt-4 mb-2" for="website">Website/Link</label>
