@@ -1,544 +1,542 @@
-<!doctype html>
+<?php require 'config/db.php'; ?>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Workout Tracker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RawFit - Workout Split Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    body{font-family:'Inter',sans-serif;}
+    .glass{background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);}
+    .btn-orange{background:linear-gradient(to right,#f97316,#ea580c);}
+    .btn-orange:hover{background:linear-gradient(to right,#ea580c,#dc2626);}
+    .dropzone.dragover{border-color:#f97316;background:rgba(251,146,60,0.1);}
+    .page-btn{@apply px-4 py-2 rounded-lg bg-gray-700/50 text-white hover:bg-orange-600 transition text-sm font-medium;}
+    .page-btn.active{@apply bg-orange-600;}
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen">
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+<?php
+session_start();
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+// Redirect if not logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: home.php");
+    exit();
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+// Database connection
+$conn = new mysqli("localhost", "root", "", "rawfit");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+// Get logged-in user's name
+$user_id = $_SESSION['user_id'];
+$sql = "SELECT name FROM register WHERE id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$userName = "User"; // Default name
+if ($row = $result->fetch_assoc()) {
+    $userName = $row['name'];
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+$stmt->close();
+$conn->close();
+?>
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vanilla:hover {
-  filter: drop-shadow(0 0 2em #f7df1eaa);
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-
-    </style>
-  </head>
-  <body class="bg-gray-50">
-    <div id="app" class="min-h-screen">
-      <header class="bg-white shadow">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div class="flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-gray-900">Workout Tracker</h1>
-            <button id="newWorkoutBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition">
-              + New Workout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div id="workoutsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        </div>
-
-        <div id="emptyState" class="text-center py-20 hidden">
-          <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          <h3 class="mt-4 text-xl font-medium text-gray-900">No workouts yet</h3>
-          <p class="mt-2 text-gray-500">Get started by creating your first workout split</p>
-        </div>
-      </main>
-    </div>
-
-    <div id="workoutModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 id="modalTitle" class="text-2xl font-bold text-gray-900">Create New Workout</h2>
-          <button id="closeModal" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
-        </div>
-
-        <div class="p-6">
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Workout Name</label>
-            <input type="text" id="workoutName" placeholder="e.g., Push Day, Leg Day" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-            <textarea id="workoutDescription" placeholder="Optional workout description" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
-          </div>
-
-          <div class="mb-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Exercises</h3>
-              <button id="addExerciseBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition">+ Add Exercise</button>
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                        <path d="M6.5 6.5h11v11h-11z"/>
+                        <path d="M6.5 6.5L2 2"/>
+                        <path d="M17.5 6.5L22 2"/>
+                        <path d="M6.5 17.5L2 22"/>
+                        <path d="M17.5 17.5L22 22"/>
+                    </svg>
+                </div>
+                <span class="text-white font-bold text-xl">RawFit</span>
             </div>
-            <div id="exercisesList" class="space-y-3">
+
+            <!-- Navigation Links -->
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="home.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="nutrition.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                        <path d="M12 18h.01"/>
+                    </svg>
+                    <span>Nutrition</span>
+                </a>
+                <a href="trainer.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span>Trainers</span>
+                </a>
+                <a href="display_gym.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                        <path d="M12 18h.01"/>
+                    </svg>
+                    <span>Gyms</span>
+                </a>
+                  <a href="workout_view.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                            <path d="M12 18h.01"/>
+                        </svg>
+                        <span>Workout</span>
+                    </a> 
             </div>
-          </div>
 
-          <div class="flex justify-end gap-3 pt-4 border-t">
-            <button id="cancelBtn" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancel</button>
-            <button id="saveWorkoutBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">Save Workout</button>
-          </div>
+            <!-- User Info -->
+            <div class="relative flex items-center space-x-4">
+                <div class="hidden sm:block text-right">
+                    <p class="text-white font-medium" id="userName"><?php echo htmlspecialchars($userName); ?></p>
+                </div>
+                <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center cursor-pointer" id="profileButton">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+
+                <!-- Dropdown Menu -->
+                <div id="profileDropdown" class="absolute top-full right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-md border border-gray-700 rounded-lg shadow-lg hidden z-50">
+                    <a href="profile.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">View Profile</a>
+                    <a href="logout.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">Logout</a>
+                </div>
+            </div>
         </div>
+
+        <!-- Mobile Navigation -->
+        <div class="md:hidden flex items-center justify-around py-3 border-t border-gray-800">
+            <a href="home.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-orange-500">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9,22 9,12 15,12 15,22"/>
+                </svg>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="nutrition.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                    <path d="M12 18h.01"/>
+                </svg>
+                <span class="text-xs">Nutrition</span>
+            </a>
+            <a href="trainer.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span class="text-xs">Trainers</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<script>
+      document.addEventListener('DOMContentLoaded', function() {
+          updateNavigation();
+      });
+
+      // Highlight active link
+      function updateNavigation() {
+          const currentPage = window.location.pathname.split('/').pop();
+          const navLinks = document.querySelectorAll('.nav-link');
+          const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+          [...navLinks, ...mobileNavLinks].forEach(link => {
+              link.classList.remove('active', 'bg-orange-500', 'text-white', 'text-orange-500');
+              link.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
+          });
+
+          if (currentPage === 'index.php' || currentPage === 'home.php' || currentPage === '') {
+              const homeLinks = document.querySelectorAll('a[href="home.php"], a[href="index.php"]');
+              homeLinks.forEach(link => {
+                  if (link.classList.contains('mobile-nav-link')) {
+                      link.classList.add('active', 'text-orange-500');
+                      link.classList.remove('text-gray-400');
+                  } else {
+                      link.classList.add('active', 'bg-orange-500', 'text-white');
+                      link.classList.remove('text-gray-300');
+                  }
+              });
+          }
+      }
+
+      // Profile dropdown toggle
+      const profileButton = document.getElementById('profileButton');
+      const profileDropdown = document.getElementById('profileDropdown');
+
+      if (profileButton && profileDropdown) {
+          profileButton.addEventListener('click', function(e) {
+              e.preventDefault();
+              profileDropdown.classList.toggle('hidden');
+          });
+
+          document.addEventListener('click', function(e) {
+              if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
+                  profileDropdown.classList.add('hidden');
+              }
+          });
+      }
+</script>
+<br><br>
+
+<div class="container mx-auto px-4 py-12 max-w-7xl">
+
+  <div class="text-center mb-10">
+    <h1 class="text-5xl md:text-6xl font-bold bg-gradient-to-r from-orange-400 to-red-600 bg-clip-text text-transparent">
+      Workout Split Builder
+    </h1>
+  </div>
+
+  <!-- Search -->
+  <div class="glass p-8 rounded-2xl shadow-xl mb-8 border border-gray-700">
+    <div class="flex gap-3">
+      <input type="text" id="searchInput" placeholder="Search 800+ exercises..."
+             class="flex-1 px-5 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition text-lg"/>
+      <button id="searchBtn" class="btn-orange text-white px-8 py-4 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-orange-500/25 transition transform hover:scale-105">
+        Search
+      </button>
+    </div>
+    <div id="exerciseResults" class="mt-8 space-y-3"></div>
+    <div id="pagination" class="flex justify-center gap-2 mt-6 hidden"></div>
+  </div>
+
+  <!-- Selected -->
+  <div id="selectedExercises" class="glass p-6 rounded-2xl shadow-xl mb-8 hidden border border-gray-700">
+    <h3 class="text-xl font-bold text-orange-400 mb-4">Selected (<span id="selectedCount">0</span>)</h3>
+    <div id="selectedList" class="space-y-2"></div>
+  </div>
+
+  <!-- 7-Day Split -->
+  <div class="glass p-8 rounded-2xl shadow-xl border border-gray-700">
+    <input type="text" id="splitName" placeholder="Enter Split Name (e.g., Push Pull Legs)"
+           class="w-full px-5 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-8 text-lg"/>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <?php
+      $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      foreach ($days as $i => $day):
+      ?>
+      <div class="day-card bg-gray-800/60 border border-gray-600 rounded-2xl p-5 shadow-lg hover:shadow-orange-500/20 transition-all duration-300 transform hover:-translate-y-1"
+           data-day="<?= $i+1 ?>">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-white"><?= $day ?></h3>
+          <span class="text-xs font-medium text-orange-400 bg-orange-400/10 px-2 py-1 rounded-full">Day <?= $i+1 ?></span>
+        </div>
+
+        <div class="exercise-dropzone min-h-48 p-5 border-2 border-dashed border-gray-600 rounded-xl bg-gray-900/40 flex flex-col items-center justify-center text-gray-400 transition-all duration-200 hover:border-orange-500 hover:bg-orange-500/5"
+             ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)">
+          <p class="text-sm font-medium">Drop or add exercises here</p>
+        </div>
+
+        <div class="exercise-list mt-4 space-y-2"></div>
       </div>
+      <?php endforeach; ?>
     </div>
 
-    <div id="exerciseModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-gray-900">Add Exercise</h2>
-          <button id="closeExerciseModal" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
-        </div>
+   <button id="saveSplit" class="mt-10 w-full btn-orange text-white py-4 rounded-xl text-xl font-bold shadow-lg hover:shadow-orange-500/25 transition transform hover:scale-105">
+  Save
+</button>
+  </div>
 
-        <div class="p-6">
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Category</label>
-            <select id="categoryFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              <option value="">All Categories</option>
-              <option value="chest">Chest</option>
-              <option value="back">Back</option>
-              <option value="legs">Legs</option>
-              <option value="shoulders">Shoulders</option>
-              <option value="arms">Arms</option>
-              <option value="core">Core</option>
-              <option value="cardio">Cardio</option>
-            </select>
-          </div>
-
-          <div id="exerciseSelectionList" class="space-y-2 max-h-96 overflow-y-auto">
-          </div>
-        </div>
-      </div>
+  <!-- Modal -->
+  <div id="exerciseModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 p-4">
+    <div class="glass rounded-2xl max-w-3xl w-full max-h-screen overflow-y-auto p-8 relative shadow-2xl border border-gray-700">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl">X</button>
+      <div id="modalContent"></div>
     </div>
+  </div>
 
-    <div id="viewWorkoutModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-      <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+</div>
+
+<script>
+/* ---------- STATE ---------- */
+const splitData = Array(7).fill().map(() => []);
+let currentPage = 1;
+const PER_PAGE = 10;
+
+/* ---------- PROMPT FOR REPS/REST ---------- */
+function promptExerciseDetails(ex) {
+  return new Promise(resolve => {
+    // Build a tiny modal (no external lib)
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4';
+    overlay.innerHTML = `
+      <div class="glass rounded-2xl p-6 max-w-md w-full border border-gray-700">
+        <h3 class="text-xl font-bold text-orange-400 mb-4">Add <span class="text-white">${ex.name}</span></h3>
+        <div class="space-y-4">
           <div>
-            <h2 id="viewWorkoutTitle" class="text-2xl font-bold text-gray-900"></h2>
-            <p id="viewWorkoutDescription" class="text-sm text-gray-600 mt-1"></p>
+            <label class="block text-sm text-gray-300 mb-1">Sets</label>
+            <input type="number" id="inpSets" min="1" value="3"
+                   class="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
           </div>
-          <button id="closeViewModal" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">Reps (e.g. 8-12)</label>
+            <input type="text" id="inpReps" value="8-12"
+                   class="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">Rest (seconds)</label>
+            <input type="number" id="inpRest" min="0" value="60"
+                   class="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+          </div>
         </div>
-
-        <div class="p-6">
-          <div id="viewExercisesList" class="space-y-4">
-          </div>
+        <div class="flex gap-3 mt-6">
+          <button id="cancelDetail" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition">Cancel</button>
+          <button id="confirmDetail" class="flex-1 btn-orange text-white py-2 rounded-lg transition">Add</button>
         </div>
       </div>
-    </div>
+    `;
+    document.body.appendChild(overlay);
 
-    <script type="module" src="/workout.js"></script>
-  </body>
-  <script>
-    const SUPABASE_URL = 'https://vghawarveydrwtsxvqkj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnaGF3YXJ2ZXlkcnd0c3h2cWtqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1OTcwMzgsImV4cCI6MjA3ODE3MzAzOH0.53-d9txfszFVwN2tim9zjFw_9eYsNpKTfcSuXuXH8ew';
+    const sets = overlay.querySelector('#inpSets');
+    const reps = overlay.querySelector('#inpReps');
+    const rest = overlay.querySelector('#inpRest');
 
-let allExercises = [];
-let currentWorkoutExercises = [];
-let currentSplitId = null;
+    overlay.querySelector('#cancelDetail').onclick = () => {
+      overlay.remove(); resolve(null);
+    };
+    overlay.querySelector('#confirmDetail').onclick = () => {
+      const s = parseInt(sets.value) || 3;
+      const r = reps.value.trim() || '8-12';
+      const t = parseInt(rest.value) || 60;
+      overlay.remove();
+      resolve({sets: s, reps: r, rest: t});
+    };
+  });
+}
 
-async function supabaseRequest(endpoint, method = 'GET', data = null) {
-  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+/* ---------- LOAD TEMP ---------- */
+async function loadTemp(){
+  const res = await fetch('get_temp.php');
+  const data = await res.json();
+  data.forEach((day, idx)=>{ splitData[idx]=day; renderDay(idx); });
+  updateCount();
+}
+loadTemp();
 
-  const options = {
-    method,
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json'
+/* ---------- SEARCH ---------- */
+document.getElementById('searchBtn').onclick = search;
+document.getElementById('searchInput').addEventListener('keypress',e=>e.key==='Enter'&&search());
+
+async function search(){
+  const q = document.getElementById('searchInput').value.trim();
+  currentPage = 1;
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true; btn.innerHTML = 'Searching...';
+
+  const res = await fetch(`search_exercises.php?q=${encodeURIComponent(q)}`);
+  const {exercises} = await res.json();
+
+  btn.disabled = false; btn.innerHTML = 'Search';
+
+  const container = document.getElementById('exerciseResults');
+  const pagination = document.getElementById('pagination');
+  container.innerHTML=''; pagination.innerHTML='';
+
+  if(!exercises.length){
+    container.innerHTML='<p class="text-center text-gray-400 py-12 text-lg">No exercises found.</p>';
+    pagination.classList.add('hidden');
+    return;
+  }
+
+  const totalPages = Math.ceil(exercises.length/PER_PAGE);
+  const start = (currentPage-1)*PER_PAGE;
+  const page = exercises.slice(start,start+PER_PAGE);
+
+  page.forEach(ex=>{
+    const row = document.createElement('div');
+    row.className='flex items-center justify-between bg-gray-800/50 p-4 rounded-lg border border-gray-600 hover:border-orange-500 transition';
+    row.draggable=true;
+    row.dataset.exercise=JSON.stringify(ex);
+
+    const info = document.createElement('div');
+    info.className='flex-1 min-w-0 cursor-pointer';
+    info.innerHTML=`<p class="font-medium text-white truncate">${ex.name}</p>
+                    <p class="text-xs text-orange-400">${ex.target} • ${ex.bodyPart}</p>`;
+    info.onclick=()=>showModal(ex);
+
+    const controls = document.createElement('div');
+    controls.className='flex items-center gap-2';
+    const sel = document.createElement('select');
+    sel.className='bg-gray-700 text-white text-xs rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500';
+    sel.innerHTML=`<option value="" disabled selected>Day</option>`+
+      ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        .map((d,i)=>`<option value="${i}">${d}</option>`).join('');
+    const add = document.createElement('button');
+    add.className='bg-orange-600 hover:bg-orange-400 text-white px-3 py-1 rounded text-xs font-medium transition';
+    add.textContent='Add';
+    add.onclick=async ()=> {
+      const dayIdx = parseInt(sel.value);
+      if (isNaN(dayIdx)) return alert('Select a day');
+      await addExerciseToDay(ex, dayIdx);
+    };
+
+    controls.append(sel,add);
+    row.append(info,controls);
+    container.appendChild(row);
+    row.addEventListener('dragstart',drag);
+  });
+
+  if(totalPages>1){
+    pagination.classList.remove('hidden');
+    for(let i=1;i<=totalPages;i++){
+      const b=document.createElement('button');
+      b.className=`page-btn ${i===currentPage?'active':''}`;
+      b.textContent=i;
+      b.onclick=()=>{currentPage=i;search();};
+      pagination.appendChild(b);
     }
-  };
-
-  if (data && (method === 'POST' || method === 'PUT')) {
-    options.body = JSON.stringify(data);
-  }
-
-  const response = await fetch(url, options);
-  return response.json();
+  }else pagination.classList.add('hidden');
 }
 
-async function loadWorkouts() {
-  const splits = await supabaseRequest('workout_splits?select=*&order=created_at.desc');
-  const workoutsList = document.getElementById('workoutsList');
-  const emptyState = document.getElementById('emptyState');
+/* ---------- ADD (UI + DB) ---------- */
+async function addExerciseToDay(ex, dayIdx){
+  // 1. Ask user
+  const details = await promptExerciseDetails(ex);
+  if (!details) return;                 // cancelled
 
-  if (!splits || splits.length === 0) {
-    workoutsList.innerHTML = '';
-    emptyState.classList.remove('hidden');
-    return;
+  // 2. Prevent duplicate in the same day
+  if (splitData[dayIdx].some(e=>e.id===ex.id)) {
+    return alert('Already added to this day');
   }
 
-  emptyState.classList.add('hidden');
-  workoutsList.innerHTML = splits.map(split => `
-    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition cursor-pointer" data-split-id="${split.id}">
-      <h3 class="text-xl font-bold text-gray-900 mb-2">${split.name}</h3>
-      <p class="text-gray-600 text-sm mb-4">${split.description || 'No description'}</p>
-      <div class="flex justify-between items-center">
-        <button class="view-workout text-blue-600 hover:text-blue-700 font-medium text-sm">View Details</button>
-        <button class="delete-workout text-red-600 hover:text-red-700 font-medium text-sm">Delete</button>
+  // 3. Store with custom values
+  splitData[dayIdx].push({...ex, ...details});
+  renderDay(dayIdx);
+  updateCount();
+
+  // 4. Persist temporary data
+  await fetch('add_exercise.php',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({exercise:ex, day:dayIdx, ...details})
+  });
+}
+
+/* ---------- DRAG & DROP ---------- */
+function allowDrop(e){e.preventDefault();}
+function drag(e){
+  const ex = JSON.parse(e.target.closest('[data-exercise]').dataset.exercise);
+  e.dataTransfer.setData('exercise',JSON.stringify(ex));
+}
+function dragEnter(e){e.target.classList.add('dragover');}
+function dragLeave(e){e.target.classList.remove('dragover');}
+function drop(e){
+  e.preventDefault();
+  e.target.classList.remove('dragover');
+  const ex = JSON.parse(e.dataTransfer.getData('exercise'));
+  const dayIdx = parseInt(e.target.closest('.day-card').dataset.day)-1;
+  addExerciseToDay(ex,dayIdx);
+}
+
+/* ---------- RENDER DAY ---------- */
+function renderDay(idx){
+  const card = document.querySelectorAll('.day-card')[idx];
+  const zone = card.querySelector('.exercise-dropzone');
+  const list = card.querySelector('.exercise-list');
+  const day = splitData[idx];
+
+  if(!day.length){
+    zone.innerHTML=`<p class="text-sm font-medium">Drop or add exercises here</p>`;
+    list.innerHTML='';
+    return;
+  }
+  zone.innerHTML=`<p class="text-xs text-gray-500 text-center">Add more...</p>`;
+  list.innerHTML = day.map((ex,i)=>`
+    <div class="bg-gray-700/50 p-3 rounded-lg flex justify-between items-center border border-gray-600 hover:border-orange-500 transition">
+      <div class="flex-1 min-w-0">
+        <p class="font-medium text-white text-sm truncate">${ex.name}</p>
+        <p class="text-xs text-orange-400">${ex.sets}×${ex.reps} | Rest: ${ex.rest}s</p>
       </div>
+      <button onclick="remove(${idx},${i})" class="text-red-400 hover:text-red-300 ml-2 transition">X</button>
     </div>
   `).join('');
-
-  document.querySelectorAll('.view-workout').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const splitId = e.target.closest('[data-split-id]').dataset.splitId;
-      viewWorkout(splitId);
-    });
-  });
-
-  document.querySelectorAll('.delete-workout').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const splitId = e.target.closest('[data-split-id]').dataset.splitId;
-      deleteWorkout(splitId);
-    });
-  });
+}
+function remove(day,i){
+  splitData[day].splice(i,1);
+  renderDay(day);
+  updateCount();
+}
+function updateCount(){
+  const total = splitData.flat().length;
+  document.getElementById('selectedCount').textContent = total;
+  document.getElementById('selectedExercises').classList.toggle('hidden',total===0);
 }
 
-async function viewWorkout(splitId) {
-  const split = await supabaseRequest(`workout_splits?id=eq.${splitId}&select=*`);
-  const exercises = await supabaseRequest(`workout_exercises?split_id=eq.${splitId}&select=*,exercises(name,category)&order=order_index`);
+/* ---------- SAVE SPLIT ---------- */
+document.getElementById('saveSplit').onclick = async () => {
+  const name = document.getElementById('splitName').value.trim() || 'My Split';
+  const payload = {name, days: splitData.filter(d=>d.length)};
+  if(!payload.days.length) return alert('Add at least one exercise!');
 
-  if (!split || split.length === 0) return;
-
-  const workout = split[0];
-  document.getElementById('viewWorkoutTitle').textContent = workout.name;
-  document.getElementById('viewWorkoutDescription').textContent = workout.description || 'No description';
-
-  const exercisesList = document.getElementById('viewExercisesList');
-
-  if (!exercises || exercises.length === 0) {
-    exercisesList.innerHTML = '<p class="text-gray-500 text-center py-8">No exercises added yet</p>';
-  } else {
-    exercisesList.innerHTML = exercises.map((ex, idx) => `
-      <div class="bg-gray-50 rounded-lg p-4">
-        <div class="flex justify-between items-start">
-          <div class="flex-1">
-            <h4 class="font-semibold text-gray-900">${idx + 1}. ${ex.exercises.name}</h4>
-            <span class="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 mt-1">${ex.exercises.category}</span>
-          </div>
-        </div>
-        <div class="grid grid-cols-3 gap-4 mt-3 text-sm">
-          <div>
-            <span class="text-gray-600">Sets:</span>
-            <span class="font-medium text-gray-900 ml-1">${ex.sets}</span>
-          </div>
-          <div>
-            <span class="text-gray-600">Reps:</span>
-            <span class="font-medium text-gray-900 ml-1">${ex.reps}</span>
-          </div>
-          <div>
-            <span class="text-gray-600">Rest:</span>
-            <span class="font-medium text-gray-900 ml-1">${ex.rest_seconds}s</span>
-          </div>
-        </div>
-        ${ex.notes ? `<p class="text-sm text-gray-600 mt-2 italic">${ex.notes}</p>` : ''}
-      </div>
-    `).join('');
+  const res = await fetch('save_split.php',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  const r = await res.json();
+  if(r.success){
+    alert('Saved! ID: '+r.splitId);
+    location.href = `view_split.php?id=${r.splitId}`;
+  }else{
+    alert('Error: '+r.error);
   }
+};
 
-  document.getElementById('viewWorkoutModal').classList.remove('hidden');
-  document.getElementById('viewWorkoutModal').classList.add('flex');
-}
-
-async function deleteWorkout(splitId) {
-  if (!confirm('Are you sure you want to delete this workout?')) return;
-
-  await supabaseRequest(`workout_splits?id=eq.${splitId}`, 'DELETE');
-  loadWorkouts();
-}
-
-async function loadExercises() {
-  allExercises = await supabaseRequest('exercises?select=*&order=category,name');
-}
-
-function showExerciseSelection() {
-  renderExerciseSelection();
-  document.getElementById('exerciseModal').classList.remove('hidden');
-  document.getElementById('exerciseModal').classList.add('flex');
-}
-
-function renderExerciseSelection(category = '') {
-  const filtered = category
-    ? allExercises.filter(ex => ex.category === category)
-    : allExercises;
-
-  const exerciseList = document.getElementById('exerciseSelectionList');
-  exerciseList.innerHTML = filtered.map(ex => `
-    <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition exercise-select-item" data-exercise-id="${ex.id}">
-      <div class="flex justify-between items-center">
-        <div>
-          <h4 class="font-semibold text-gray-900">${ex.name}</h4>
-          <span class="inline-block px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 mt-1">${ex.category}</span>
-        </div>
-        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-        </svg>
-      </div>
-      <p class="text-sm text-gray-600 mt-2">${ex.description}</p>
+/* ---------- MODAL ---------- */
+function showModal(ex){
+  const modal = document.getElementById('exerciseModal');
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <div class="text-center mb-6">
+     
     </div>
-  `).join('');
-
-  document.querySelectorAll('.exercise-select-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const exerciseId = item.dataset.exerciseId;
-      const exercise = allExercises.find(ex => ex.id === exerciseId);
-      addExerciseToWorkout(exercise);
-      document.getElementById('exerciseModal').classList.add('hidden');
-      document.getElementById('exerciseModal').classList.remove('flex');
-    });
-  });
-}
-
-function addExerciseToWorkout(exercise) {
-  currentWorkoutExercises.push({
-    exercise_id: exercise.id,
-    exercise_name: exercise.name,
-    exercise_category: exercise.category,
-    sets: 3,
-    reps: '8-12',
-    rest_seconds: 60,
-    notes: ''
-  });
-
-  renderWorkoutExercises();
-}
-
-function renderWorkoutExercises() {
-  const exercisesList = document.getElementById('exercisesList');
-
-  if (currentWorkoutExercises.length === 0) {
-    exercisesList.innerHTML = '<p class="text-gray-500 text-center py-4">No exercises added yet. Click "Add Exercise" to get started.</p>';
-    return;
-  }
-
-  exercisesList.innerHTML = currentWorkoutExercises.map((ex, idx) => `
-    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-      <div class="flex justify-between items-start mb-3">
-        <div>
-          <h4 class="font-semibold text-gray-900">${ex.exercise_name}</h4>
-          <span class="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 mt-1">${ex.exercise_category}</span>
-        </div>
-        <button class="text-red-600 hover:text-red-700 font-bold text-xl remove-exercise" data-index="${idx}">&times;</button>
-      </div>
-      <div class="grid grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Sets</label>
-          <input type="number" value="${ex.sets}" min="1" class="w-full px-3 py-2 border border-gray-300 rounded text-sm exercise-sets" data-index="${idx}">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Reps</label>
-          <input type="text" value="${ex.reps}" class="w-full px-3 py-2 border border-gray-300 rounded text-sm exercise-reps" data-index="${idx}">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Rest (sec)</label>
-          <input type="number" value="${ex.rest_seconds}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded text-sm exercise-rest" data-index="${idx}">
-        </div>
-      </div>
-      <div class="mt-3">
-        <label class="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-        <input type="text" value="${ex.notes}" placeholder="Optional notes" class="w-full px-3 py-2 border border-gray-300 rounded text-sm exercise-notes" data-index="${idx}">
-      </div>
+    <h2 class="text-3xl font-bold text-orange-400 mb-4">${ex.name}</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
+      <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-600"><strong class="text-orange-400">Target:</strong> <span class="text-white">${ex.target||'-'}</span></div>
+      <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-600"><strong class="text-orange-400">Body Part:</strong> <span class="text-white">${ex.bodyPart||'-'}</span></div>
+      <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-600"><strong class="text-orange-400">Equipment:</strong> <span class="text-white">${ex.equipment||'-'}</span></div>
     </div>
-  `).join('');
-
-  document.querySelectorAll('.remove-exercise').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      currentWorkoutExercises.splice(index, 1);
-      renderWorkoutExercises();
-    });
-  });
-
-  document.querySelectorAll('.exercise-sets').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      currentWorkoutExercises[index].sets = parseInt(e.target.value);
-    });
-  });
-
-  document.querySelectorAll('.exercise-reps').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      currentWorkoutExercises[index].reps = e.target.value;
-    });
-  });
-
-  document.querySelectorAll('.exercise-rest').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      currentWorkoutExercises[index].rest_seconds = parseInt(e.target.value);
-    });
-  });
-
-  document.querySelectorAll('.exercise-notes').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      currentWorkoutExercises[index].notes = e.target.value;
-    });
-  });
+    <div class="bg-gray-800/50 p-5 rounded-lg border border-gray-600">
+      <h3 class="text-xl font-semibold text-orange-400 mb-3">Instructions</h3>
+      <p class="text-gray-300 leading-relaxed">${(ex.instructions||'').replace(/\n/g,'<br>')}</p>
+    </div>
+  `;
+  modal.classList.remove('hidden');
 }
+function closeModal(){ document.getElementById('exerciseModal').classList.add('hidden'); }
 
-async function saveWorkout() {
-  const name = document.getElementById('workoutName').value.trim();
-  const description = document.getElementById('workoutDescription').value.trim();
+/* ---------- INIT ---------- */
+document.querySelectorAll('.day-card').forEach((c,i)=>{ c.dataset.day=i+1; renderDay(i); });
+</script>
 
-  if (!name) {
-    alert('Please enter a workout name');
-    return;
-  }
-
-  const splitData = { name, description };
-  const splitResult = await supabaseRequest('workout_splits', 'POST', splitData);
-
-  if (!splitResult || splitResult.length === 0) {
-    alert('Error creating workout');
-    return;
-  }
-
-  const splitId = splitResult[0].id;
-
-  for (let i = 0; i < currentWorkoutExercises.length; i++) {
-    const ex = currentWorkoutExercises[i];
-    await supabaseRequest('workout_exercises', 'POST', {
-      split_id: splitId,
-      exercise_id: ex.exercise_id,
-      sets: ex.sets,
-      reps: ex.reps,
-      rest_seconds: ex.rest_seconds,
-      notes: ex.notes,
-      order_index: i
-    });
-  }
-
-  closeWorkoutModal();
-  loadWorkouts();
-}
-
-function openWorkoutModal() {
-  currentWorkoutExercises = [];
-  document.getElementById('workoutName').value = '';
-  document.getElementById('workoutDescription').value = '';
-  renderWorkoutExercises();
-  document.getElementById('workoutModal').classList.remove('hidden');
-  document.getElementById('workoutModal').classList.add('flex');
-}
-
-function closeWorkoutModal() {
-  document.getElementById('workoutModal').classList.add('hidden');
-  document.getElementById('workoutModal').classList.remove('flex');
-}
-
-document.getElementById('newWorkoutBtn').addEventListener('click', openWorkoutModal);
-document.getElementById('closeModal').addEventListener('click', closeWorkoutModal);
-document.getElementById('cancelBtn').addEventListener('click', closeWorkoutModal);
-document.getElementById('saveWorkoutBtn').addEventListener('click', saveWorkout);
-document.getElementById('addExerciseBtn').addEventListener('click', showExerciseSelection);
-
-document.getElementById('closeExerciseModal').addEventListener('click', () => {
-  document.getElementById('exerciseModal').classList.add('hidden');
-  document.getElementById('exerciseModal').classList.remove('flex');
-});
-
-document.getElementById('closeViewModal').addEventListener('click', () => {
-  document.getElementById('viewWorkoutModal').classList.add('hidden');
-  document.getElementById('viewWorkoutModal').classList.remove('flex');
-});
-
-document.getElementById('categoryFilter').addEventListener('change', (e) => {
-  renderExerciseSelection(e.target.value);
-});
-
-loadExercises();
-loadWorkouts();
-
-  </script>
+</body>
 </html>

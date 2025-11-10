@@ -100,7 +100,7 @@ $owner_id = $_SESSION['owner_id'];
 
                 <!-- Navigation Links -->
                 <div class="hidden md:flex items-center space-x-6">
-                    <a href="owner_dashboard.php" class="text-gray-300 hover:text-white transition">Dashboard</a>
+                    <a href="owner_dashboard.php" class="text-gray-300 hover:text-white transition">Home</a>
                     <a href="Manage_Gyms.php" class="text-gray-300 hover:text-white transition">Add Gym</a>
                 </div>
 
@@ -263,10 +263,12 @@ $owner_id = $_SESSION['owner_id'];
                            class="flex-1 bg-gray-700 text-white text-center py-2 rounded-lg hover:bg-gray-600 transition">
                             Edit
                         </a>
-                        <a href="gym_idv_details.php?id=<?php echo $gym['gym_id']; ?>" 
-                           class="flex-1 bg-orange-600 text-white text-center py-2 rounded-lg hover:bg-orange-700 transition">
-                            View
+                        <a href="delete_gym.php?id=<?php echo $gym['gym_id']; ?>" 
+                        onclick="return confirm('Are you sure you want to delete this gym? This action cannot be undone.');"
+                        class="flex-1 bg-red-600 text-white text-center py-2 rounded-lg hover:bg-red-700 transition">
+                        Delete
                         </a>
+
                     </div>
                 </div>
             </div>

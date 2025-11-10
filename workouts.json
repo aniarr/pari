@@ -1,0 +1,106 @@
+[
+    {
+        "name": "Morning Run",
+        "type": "Cardio",
+        "duration": 30,
+        "notes": "5 km easy pace in the park.",
+        "id": "1762603365158",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Morning Run",
+        "type": "Cardio",
+        "duration": 30,
+        "notes": "5 km easy pace in the park.",
+        "id": "1762603365689",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Morning Run",
+        "type": "Cardio",
+        "duration": 30,
+        "notes": "5 km easy pace in the park.",
+        "id": "1762603366947",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Morning Run",
+        "type": "Cardio",
+        "duration": 30,
+        "notes": "5 km easy pace in the park.",
+        "id": "1762603366903",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Jump Rope",
+        "type": "HIIT",
+        "duration": 25,
+        "notes": "1 min on \/ 30 s off.",
+        "id": "1762603370534",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Swim Session",
+        "type": "Swimming",
+        "duration": 40,
+        "notes": "1000 m freestyle + drills.",
+        "id": "176260337170",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Bodyweight Circuit",
+        "type": "HIIT",
+        "duration": 30,
+        "notes": "Burpees, squats, push-ups, climbers.",
+        "id": "1762603371273",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Pilates Core",
+        "type": "Flexibility",
+        "duration": 35,
+        "notes": "Deep core activation.",
+        "id": "1762603371754",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Pilates Core",
+        "type": "Flexibility",
+        "duration": 35,
+        "notes": "Deep core activation.",
+        "id": "1762603372579",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Cycling",
+        "type": "Cardio",
+        "duration": 45,
+        "notes": "Moderate pace, ~15 km.",
+        "id": "1762603372501",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Jump Rope",
+        "type": "HIIT",
+        "duration": 25,
+        "notes": "1 min on \/ 30 s off.",
+        "id": "1762603372761",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Kettlebell Swings",
+        "type": "HIIT",
+        "duration": 20,
+        "notes": "100 swings EMOM.",
+        "id": "1762603372257",
+        "date": "2025-11-08"
+    },
+    {
+        "name": "Meditation + Stretch",
+        "type": "Yoga",
+        "duration": 25,
+        "notes": "Mindful breathing + gentle yoga.",
+        "id": "1762603373936",
+        "date": "2025-11-08"
+    }
+]

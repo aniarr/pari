@@ -118,11 +118,7 @@ $result = $stmt->get_result();
             ?>
           </div>
 
-          <!-- Reviewer Info -->
-          <div class="flex justify-between items-center text-sm text-gray-400">
-            <span>By <?php echo htmlspecialchars($row['user_name']); ?></span>
-            <span><?php echo date("M d, Y", strtotime($row['created_at'])); ?></span>
-          </div>
+     
         </div>
       <?php endwhile; ?>
     <?php else: ?>

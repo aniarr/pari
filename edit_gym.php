@@ -1,388 +1,375 @@
-    <?php
-    session_start();
+<?php
+session_start();
 
-   
+// ---------------------------------------------------------------------
+// 1. Owner must be logged in
+// ---------------------------------------------------------------------
+if (!isset($_SESSION['owner_id'])) {
+    header('Location: login_owner.php');
+    exit;
+}
+$owner_id = (int)$_SESSION['owner_id'];
+$gym_id   = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-    // Database connection
-    $conn = new mysqli("localhost", "root", "", "rawfit");
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
+// ---------------------------------------------------------------------
+// 2. DB connection
+// ---------------------------------------------------------------------
+$conn = new mysqli('localhost', 'root', '', 'rawfit');
+if ($conn->connect_error) {
+    die('Connection failed: ' . $conn->connect_error);
+}
+
+// ---------------------------------------------------------------------
+// 3. Verify that the gym belongs to this owner
+// ---------------------------------------------------------------------
+$stmt = $conn->prepare('SELECT * FROM gyms WHERE gym_id = ? AND owner_id = ?');
+$stmt->bind_param('ii', $gym_id, $owner_id);
+$stmt->execute();
+$res = $stmt->get_result();
+
+if ($res->num_rows === 0) {
+    $_SESSION['error'] = 'Gym not found or you do not own it.';
+    header('Location: owner_dashboard.php');
+    exit;
+}
+$gym = $res->fetch_assoc();
+$stmt->close();
+
+// ---------------------------------------------------------------------
+// 4. FORM SUBMISSION
+// ---------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // ---- collect & sanitize ------------------------------------------------
+    $gym_name        = trim($_POST['gym_name']);
+    $location        = trim($_POST['location']);
+    $gym_address     = trim($_POST['gym_address']);
+    $gym_city        = trim($_POST['gym_city']);
+    $gym_state       = trim($_POST['gym_state']);
+    $gym_zip         = trim($_POST['gym_zip']);
+    $gym_phone       = trim($_POST['gym_phone']);
+    $gym_email       = trim($_POST['gym_email']);
+    $timings         = trim($_POST['timings']);
+    $facilities      = trim($_POST['facilities']);
+    $gym_description = trim($_POST['gym_description']);
+    $year_started    = (int)$_POST['year_started'];
+    $num_trainers    = (int)$_POST['num_trainers'];
+    $capacity        = (int)$_POST['capacity'];
+
+    // experience_years = current year – year_started
+    $experience_years = date('Y') - $year_started;
+
+    // ---- UPDATE gym details ------------------------------------------------
+    $sql = "
+        UPDATE gyms SET
+            gym_name        = ?, location        = ?, gym_address   = ?,
+            gym_city        = ?, gym_state       = ?, gym_zip       = ?,
+            gym_phone       = ?, gym_email       = ?, timings       = ?,
+            facilities      = ?, gym_description = ?, year_started  = ?,
+            experience_years= ?, num_trainers    = ?, capacity      = ?
+        WHERE gym_id = ? AND owner_id = ?
+    ";
+
+    $update = $conn->prepare($sql);
+    // 11 strings + 6 integers = 17 placeholders
+    $update->bind_param(
+        'sssssssssssiiiiii',               // <-- 11 s + 6 i
+        $gym_name, $location, $gym_address,
+        $gym_city, $gym_state, $gym_zip,
+        $gym_phone, $gym_email, $timings,
+        $facilities, $gym_description,
+        $year_started, $experience_years, $num_trainers, $capacity,
+        $gym_id, $owner_id
+    );
+
+    if ($update->execute()) {
+        $_SESSION['success'] = 'Gym details saved.';
+    } else {
+        $_SESSION['error'] = 'Failed to save gym details.';
     }
+    $update->close();
 
-    // Fetch user details
-        $user_id = $_SESSION['user_id'];
-        $sql = "SELECT name, email, phone, address, age, dob, blood_group, location, gender, interests, website FROM users_details WHERE id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $stmt->bind_result($name, $email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $interests, $website);
-        $stmt->fetch();
-        $stmt->close();
+    // -----------------------------------------------------------------
+    // 5. IMAGE UPLOAD (multiple)
+    // -----------------------------------------------------------------
+    if (!empty($_FILES['gym_images']['name'][0])) {
+        $dir = 'uploads/gyms/';
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
 
-        $userData = [
-            'name' => $name ?? 'User',
-            'email' => $email ?? '',
-            'phone' => $phone ?? '',
-            'address' => $address ?? '',
-            'age' => $age ?? '',
-            'dob' => $dob ?? '',
-            'blood_group' => $blood_group ?? '',
-            'location' => $location ?? '',
-            'gender' => $gender ?? '',
-            'interests' => $interests ?? '',
-            'website' => $website ?? '',
-        ];
+        $allowed = ['jpg','jpeg','png','webp'];
+        foreach ($_FILES['gym_images']['name'] as $k => $name) {
+            if ($_FILES['gym_images']['error'][$k] !== 0) continue;
 
+            $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $size = $_FILES['gym_images']['size'][$k];
 
-    // Handle form submission
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $name = $_POST['name'] ?? $userData['name'];
-        $email = $_POST['email'] ?? $userData['email'];
-        $phone = $_POST['phone'] ?? $userData['phone'];
-        $address = $_POST['address'] ?? $userData['address'];
-        $age = $_POST['age'] ?? $userData['age'];
-        $dob = $_POST['dob'] ?? $userData['dob'];
-        $blood_group = $_POST['blood_group'] ?? $userData['blood_group'];
-        $location = $_POST['location'] ?? $userData['location'];
-        $gender = $_POST['gender'] ?? $userData['gender'];
-        $interests = $_POST['interests'] ?? $userData['interests'];
-        $website = $_POST['website'] ?? $userData['website'];
+            if (!in_array($ext, $allowed) || $size > 5*1024*1024) continue;
 
-        $sql = "INSERT INTO users_details (id, name, email, phone, address, age, dob, blood_group, location, gender, interests, website) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                name = VALUES(name), 
-                email = VALUES(email), 
-                phone = VALUES(phone), 
-                address = VALUES(address), 
-                age = VALUES(age), 
-                dob = VALUES(dob), 
-                blood_group = VALUES(blood_group), 
-                location = VALUES(location), 
-                gender = VALUES(gender), 
-                interests = VALUES(interests), 
-                website = VALUES(website)";
-        
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("issssissssss", $user_id, $name, $email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $interests, $website);
+            $filename = uniqid('gym_') . '.' . $ext;
+            $path     = $dir . $filename;
 
-        if ($stmt->execute()) {
-            header("Location: profile.php?success=1");
-            exit();
-        } else {
-            $error = "Failed to update profile. Please try again.";
+            if (move_uploaded_file($_FILES['gym_images']['tmp_name'][$k], $path)) {
+                $ins = $conn->prepare('INSERT INTO gym_images (gym_id, filename) VALUES (?, ?)');
+                $ins->bind_param('is', $gym_id, $filename);
+                $ins->execute();
+                $ins->close();
+            }
         }
-        $stmt->close();
     }
-    $conn->close();
-    ?>
+
+    // -----------------------------------------------------------------
+    // 6. DELETE selected images
+    // -----------------------------------------------------------------
+    if (!empty($_POST['delete_images']) && is_array($_POST['delete_images'])) {
+        $sel = $conn->prepare('SELECT filename FROM gym_images WHERE id = ? AND gym_id = ?');
+        $del = $conn->prepare('DELETE FROM gym_images WHERE id = ? AND gym_id = ?');
+
+        foreach ($_POST['delete_images'] as $img_id) {
+            $img_id = (int)$img_id;
+            $sel->bind_param('ii', $img_id, $gym_id);
+            $sel->execute();
+            $r = $sel->get_result();
+            if ($row = $r->fetch_assoc()) {
+                $file = 'uploads/gyms/' . $row['filename'];
+                if (file_exists($file)) unlink($file);
+            }
+            $del->bind_param('ii', $img_id, $gym_id);
+            $del->execute();
+        }
+        $sel->close();
+        $del->close();
+    }
+
+    // -----------------------------------------------------------------
+    // 7. Refresh $gym data for the form (so the page shows fresh values)
+    // -----------------------------------------------------------------
+    $stmt = $conn->prepare('SELECT * FROM gyms WHERE gym_id = ?');
+    $stmt->bind_param('i', $gym_id);
+    $stmt->execute();
+    $gym = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+}
+
+// ---------------------------------------------------------------------
+// 8. FETCH current images
+// ---------------------------------------------------------------------
+$img_stmt = $conn->prepare('SELECT id, filename FROM gym_images WHERE gym_id = ? ORDER BY id DESC');
+$img_stmt->bind_param('i', $gym_id);
+$img_stmt->execute();
+$images = $img_stmt->get_result();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RawFit Edit Profile</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>Edit Gym – RawFit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'inter': ['Inter', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{inter:['Inter','sans-serif']}}}};</script>
 </head>
-<body class="bg-gray-900 font-inter text-white min-h-screen">
-    <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Logo -->
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                            <path d="M6.5 6.5h11v11h-11z"/>
-                            <path d="M6.5 6.5L2 2"/>
-                            <path d="M17.5 6.5L22 2"/>
-                            <path d="M6.5 17.5L2 22"/>
-                            <path d="M17.5 17.5L22 22"/>
-                        </svg>
-                    </div>
-                    <span class="text-white font-bold text-xl">RawFit</span>
-                </div>
+<body class="bg-gray-900 font-inter text-white">
 
-                <!-- Navigation Links -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="index.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                            <polyline points="9,22 9,12 15,12 15,22"/>
-                        </svg>
-                        <span>Home</span>
-                    </a>
-                    <a href="nutrition.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
-                            <path d="M12 18h.01"/>
-                        </svg>
-                        <span>Nutrition</span>
-                    </a>
-                    <a href="trainer.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        <span>Trainers</span>
-                    </a>
-                </div>
-
-                <!-- User Info -->
-                <div class="relative flex items-center space-x-4">
-                    <div class="hidden sm:block text-right">
-                        <p class="text-white font-medium" id="userName"><?php echo htmlspecialchars($userData['name']); ?></p>
-                    </div>
-                    <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center cursor-pointer" id="profileButton">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                    </div>
-                    <!-- Dropdown Menu -->
-                    <div id="profileDropdown" class="absolute top-full right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-md border border-gray-700 rounded-lg shadow-lg hidden z-50">
-                        <a href="profile.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">View Profile</a>
-                        <a href="logout.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">Logout</a>
-                    </div>
-                </div>
+<!-- ==================== NAV ==================== -->
+<nav class="fixed top-0 inset-x-0 bg-black/90 backdrop-blur-md border-b border-gray-800 z-50">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                    <path d="M6.5 6.5h11v11h-11z"/><path d="M6.5 6.5L2 2"/><path d="M17.5 6.5L22 2"/>
+                    <path d="M6.5 17.5L2 22"/><path d="M17.5 17.5L22 22"/>
+                </svg>
             </div>
-
-            <!-- Mobile Navigation -->
-            <div class="md:hidden flex items-center justify-around py-3 border-t border-gray-800">
-                <a href="index.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400 hover:text-orange-500">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                        <polyline points="9,22 9,12 15,12 15,22"/>
-                    </svg>
-                    <span class="text-xs">Home</span>
-                </a>
-                <a href="nutrition.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400 hover:text-orange-500">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
-                        <path d="M12 18h.01"/>
-                    </svg>
-                    <span class="text-xs">Nutrition</span>
-                </a>
-                <a href="trainer.php" class="mobile-nav-link flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-400 hover:text-orange-500">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    <span class="text-xs">Trainers</span>
-                </a>
+            <span class="text-xl font-bold">RawFit</span>
+        </div>
+        <div class="hidden md:flex items-center space-x-6">
+            <a href="owner_dashboard.php" class="text-gray-300 hover:text-white">Dashboard</a>
+            <a href="Manage_Gyms.php" class="text-gray-300 hover:text-white">Add Gym</a>
+        </div>
+        <div class="flex items-center space-x-4">
+            <a href="logout.php" class="text-gray-300 hover:text-white">Logout</a>
+            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
             </div>
         </div>
-    </nav>
-    <br><br><br>
+    </div>
+</nav>
 
-    <!-- Main Content -->
-    <main class="pt-20 p-4 sm:p-6 lg:p-8">
-        <div class="max-w-7xl mx-auto">
-            <!-- Edit Profile Header -->
-            <div class="mb-8">
-                <h1 class="text-4xl font-bold text-white mb-2">
-                    Edit Profile - <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500"><?php echo htmlspecialchars(explode(" ", $userData['name'])[0]); ?></span>
-                </h1>
-                <p class="text-gray-400 text-lg">Update your personal details and preferences.</p>
-            </div>
+<!-- ==================== MAIN ==================== -->
+<main class="pt-24 pb-12 max-w-5xl mx-auto px-4">
 
-            <!-- Edit Profile Form -->
-            <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-gray-700">
-                <?php if (isset($error)): ?>
-                    <p class="text-red-500 mb-4"><?php echo htmlspecialchars($error); ?></p>
-                <?php endif; ?>
-                <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
-                    <p class="text-green-500 mb-4">Profile updated successfully!</p>
-                <?php endif; ?>
-                <form method="POST" action="" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Personal Information -->
-                        <div>
-                            <label class="block text-gray-300 mb-2" for="name">Full Name</label>
-                            <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($userData['name']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="email">Email</label>
-                            <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($userData['email']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="phone">Phone</label>
-                            <input type="tel" name="phone" id="phone" value="<?php echo htmlspecialchars($userData['phone']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="address">Address</label>
-                            <input type="text" name="address" id="address" value="<?php echo htmlspecialchars($userData['address']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="age">Age</label>
-                            <input type="number" name="age" id="age" value="<?php echo htmlspecialchars($userData['age']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="dob">Date of Birth</label>
-                            <input type="date" name="dob" id="dob" value="<?php echo htmlspecialchars($userData['dob']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="blood_group">Blood Group</label>
-                            <input type="text" name="blood_group" id="blood_group" value="<?php echo htmlspecialchars($userData['blood_group']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                        </div>
+    <h1 class="text-3xl font-bold mb-2">Edit Gym</h1>
+    <p class="text-gray-400 mb-8">Update information and manage photos</p>
 
-                        <!-- Additional Details -->
-                        <div>
-                            <label class="block text-gray-300 mb-2" for="location">Location</label>
-                            <input type="text" name="location" id="location" value="<?php echo htmlspecialchars($userData['location']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="gender">Gender/Pronouns</label>
-                            <input type="text" name="gender" id="gender" value="<?php echo htmlspecialchars($userData['gender']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="interests">Interests/Hobbies</label>
-                            <input type="text" name="interests" id="interests" value="<?php echo htmlspecialchars($userData['interests']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="website">Website/Link</label>
-                            <input type="url" name="website" id="website" value="<?php echo htmlspecialchars($userData['website']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                        </div>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <div class="mt-6 text-right">
-                        <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg text-white font-medium hover:from-orange-600 hover:to-red-600 hover:scale-105 transition-all duration-300 shadow-lg">
-                            Save Changes
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2">
-                                <path d="M5 13l4 4L19 7"/>
-                            </svg>
-                        </button>
-                    </div>
-                </form>
-            </div>
+    <!-- ---- messages ---- -->
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="mb-6 p-4 bg-green-900/50 border border-green-700 text-green-300 rounded-lg">
+            <?= $_SESSION['success']; unset($_SESSION['success']); ?>
         </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800/50 backdrop-blur-sm py-12 border-t border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div>
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                                <path d="M6.5 6.5h11v11h-11z"/>
-                                <path d="M6.5 6.5L2 2"/>
-                                <path d="M17.5 6.5L22 2"/>
-                                <path d="M6.5 17.5L2 22"/>
-                                <path d="M17.5 17.5L22 22"/>
-                            </svg>
-                        </div>
-                        <span class="text-white font-bold text-xl">RawFit</span>
-                    </div>
-                    <p class="text-gray-400 mb-4">Transform your body, transform your life. Join our fitness community and achieve your goals with expert guidance and state-of-the-art facilities.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="m16 11.37-4-4-4 4"/><path d="M21 16.5l-4-4-4 4"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Quick Links</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="index.php" class="hover:text-orange-500 transition-colors">Home</a></li>
-                        <li><a href="nutrition.php" class="hover:text-orange-500 transition-colors">Nutrition</a></li>
-                        <li><a href="trainer.php" class="hover:text-orange-500 transition-colors">Trainers</a></li>
-                        <li><a href="profile.php" class="hover:text-orange-500 transition-colors">Profile</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Support</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">FAQ</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Contact Us</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Terms of Service</a></li>
-                        <li><a href="#" class="hover:text-orange-500 transition-colors">Privacy Policy</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Contact Info</h4>
-                    <ul class="text-gray-400 space-y-2">
-                        <li>123 Fitness Street</li>
-                        <li>FitCity, GC 12345</li>
-                        <li>(555) 123-4567</li>
-                        <li>info@rawfitgym.com</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="mt-8 pt-8 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
-                <p class="text-gray-400">&copy; 2025 RawFit Gym. All rights reserved.</p>
-                <div class="flex space-x-4 mt-4 sm:mt-0">
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Privacy Policy</a>
-                    <a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Terms of Service</a>
-                </div>
-            </div>
+    <?php endif; ?>
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="mb-6 p-4 bg-red-900/50 border border-red-700 text-red-300 rounded-lg">
+            <?= $_SESSION['error']; unset($_SESSION['error']); ?>
         </div>
-    </footer>
+    <?php endif; ?>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize profile page
-            initializeProfile();
+    <!-- ---- FORM ---- -->
+    <form method="POST" enctype="multipart/form-data" class="space-y-8">
 
-            // Update navigation active states
-            updateNavigation();
-        });
+        <!-- ==== BASIC INFO ==== -->
+        <section class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <h2 class="text-xl font-semibold mb-6">Basic Information</h2>
 
-        function initializeProfile() {
-            // Load user data
-            const userData = {
-                name: '<?php echo htmlspecialchars($userData['name']); ?>'
-            };
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Gym Name *</label>
+                    <input type="text" name="gym_name" required
+                           value="<?= htmlspecialchars($gym['gym_name']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-            // Update user name in header
-            const userNameElement = document.getElementById('userName');
-            if (userNameElement) {
-                userNameElement.textContent = userData.name;
-            }
-        }
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Short Location *</label>
+                    <input type="text" name="location" required
+                           value="<?= htmlspecialchars($gym['location']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-        function updateNavigation() {
-            const currentPage = window.location.pathname.split('/').pop();
-            const navLinks = document.querySelectorAll('.nav-link');
-            const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Phone *</label>
+                    <input type="text" name="gym_phone" required
+                           value="<?= htmlspecialchars($gym['gym_phone']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-            // Remove active class from all links
-            [...navLinks, ...mobileNavLinks].forEach(link => {
-                link.classList.remove('active', 'bg-orange-500', 'text-white', 'text-orange-500');
-                link.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
-            });
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <input type="email" name="gym_email"
+                           value="<?= htmlspecialchars($gym['gym_email']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-            // Add active class to profile page link in dropdown
-            const profileDropdownLink = document.querySelector('a[href="profile.php"]');
-            if (profileDropdownLink) {
-                profileDropdownLink.classList.add('bg-orange-500', 'text-white');
-                profileDropdownLink.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
-            }
-        }
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Timings *</label>
+                    <input type="text" name="timings" required placeholder="e.g. 5 AM – 10 PM"
+                           value="<?= htmlspecialchars($gym['timings']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-        // Profile button functionality
-        const profileButton = document.getElementById('profileButton');
-        const profileDropdown = document.getElementById('profileDropdown');
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Year Started *</label>
+                    <input type="number" name="year_started" required min="1900" max="<?= date('Y') ?>"
+                           value="<?= $gym['year_started'] ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-        if (profileButton && profileDropdown) {
-            profileButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                profileDropdown.classList.toggle('hidden');
-            });
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Trainers *</label>
+                    <input type="number" name="num_trainers" required min="0"
+                           value="<?= $gym['num_trainers'] ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
 
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
-                    profileDropdown.classList.add('hidden');
-                }
-            });
-        }
-    </script>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Capacity *</label>
+                    <input type="number" name="capacity" required min="1"
+                           value="<?= $gym['capacity'] ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
+            </div>
+
+            <!-- Address fields -->
+            <div class="mt-6 grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Address *</label>
+                    <input type="text" name="gym_address" required
+                           value="<?= htmlspecialchars($gym['gym_address']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">City *</label>
+                    <input type="text" name="gym_city" required
+                           value="<?= htmlspecialchars($gym['gym_city']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">State *</label>
+                    <input type="text" name="gym_state" required
+                           value="<?= htmlspecialchars($gym['gym_state']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">ZIP *</label>
+                    <input type="text" name="gym_zip" required
+                           value="<?= htmlspecialchars($gym['gym_zip']) ?>"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500">
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Facilities (comma-separated)</label>
+                <textarea name="facilities" rows="3"
+                          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500"><?= htmlspecialchars($gym['facilities']) ?></textarea>
+            </div>
+
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                <textarea name="gym_description" rows="5"
+                          class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500"><?= htmlspecialchars($gym['gym_description']) ?></textarea>
+            </div>
+        </section>
+
+        <!-- ==== PHOTOS ==== -->
+        <section class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <h2 class="text-xl font-semibold mb-6">Gym Photos</h2>
+
+            <?php if ($images->num_rows): ?>
+                <p class="text-sm text-gray-400 mb-3">Check to delete:</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <?php while ($img = $images->fetch_assoc()): ?>
+                        <label class="relative group cursor-pointer">
+                            <input type="checkbox" name="delete_images[]" value="<?= $img['id'] ?>" class="sr-only">
+                            <img src="uploads/gyms/<?= htmlspecialchars($img['filename']) ?>"
+                                 alt="gym photo"
+                                 class="w-full h-32 object-cover rounded-lg border-2 border-gray-600 group-hover:border-red-500 transition">
+                            <div class="absolute inset-0 bg-red-600/70 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                        </label>
+                    <?php endwhile; $images->data_seek(0); ?>
+                </div>
+            <?php else: ?>
+                <p class="text-gray-400 mb-6">No photos yet.</p>
+            <?php endif; ?>
+
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+                Add New Photos (max 5 MB each)
+            </label>
+            <input type="file" name="gym_images[]" multiple accept="image/*"
+                   class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-700">
+            <p class="mt-1 text-xs text-gray-500">JPG, PNG, WebP</p>
+        </section>
+
+        <!-- ==== ACTIONS ==== -->
+        <div class="flex justify-end gap-4">
+            <a href="gym_profile.php"
+               class="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">Back</a>
+            <button type="submit"
+                    class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</main>
+
+<?php
+$img_stmt->close();
+$conn->close();
+?>
 </body>
 </html>
