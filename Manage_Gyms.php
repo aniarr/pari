@@ -8,8 +8,8 @@ if ($conn->connect_error) {
 }
 
 $message = "";
+$errors = [];
 
-// === 2. INSERT GYM DETAILS ===
 // Check if owner is logged in
 if (!isset($_SESSION['owner_id'])) {
     header('Location: login_owner.php');
@@ -17,61 +17,134 @@ if (!isset($_SESSION['owner_id'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $owner_id      = $_SESSION['owner_id'];
-    $gym_name      = $_POST['gym_name'];
-    $location      = $_POST['location'];
-    $phone         = $_POST['phone'];
-    $timings       = $_POST['timings'];
-    $facilities    = $_POST['facilities'];
-    $gym_address   = $_POST['gym_address'];
-    $gym_state     = $_POST['gym_state'];
-    $gym_zip       = $_POST['gym_zip'];
-    $gym_phone     = $_POST['gym_phone'];
-    $gym_email     = $_POST['gym_email'];
-    $gym_description = $_POST['gym_description'];
-    $capacity        = $_POST['capacity'];
-    $num_trainers   = $_POST['num_trainers'];
-    $experience_years = $_POST['experience_years'];
-    $registrations   = isset($_POST['registrations']) ? $_POST['registrations'] : 0;
+    $owner_id         = $_SESSION['owner_id'];
+    $gym_name         = trim($_POST['gym_name']);
+    $area             = trim($_POST['area']);
+    $city             = trim($_POST['city']);
+    $gym_state        = trim($_POST['gym_state']);
+    $gym_zip          = trim($_POST['gym_zip']);
+    $gym_address      = trim($_POST['gym_address']);
+    $phone            = trim($_POST['phone']);
+    $gym_phone        = trim($_POST['gym_phone']);
+    $gym_email        = trim($_POST['gym_email']);
+    $timings          = trim($_POST['timings']);
+    $facilities       = trim($_POST['facilities']);
+    $gym_description  = trim($_POST['gym_description']);
+    $capacity         = (int)$_POST['capacity'];
+    $num_trainers     = (int)$_POST['num_trainers'];
+    $experience_years = (int)$_POST['experience_years'];
+    $registrations    = isset($_POST['registrations']) ? (int)$_POST['registrations'] : 0;
 
-    $stmt = $conn->prepare("INSERT INTO gyms 
-        (owner_id, gym_name, location, phone, timings, facilities, gym_address, gym_state, gym_zip, 
-        gym_phone, gym_email, gym_description, capacity, num_trainers, experience_years, registrations, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-    $stmt->bind_param("isssssssssssiiii",
-        $owner_id, $gym_name, $location, $phone, $timings, $facilities, $gym_address,
-        $gym_state, $gym_zip, $gym_phone, $gym_email, $gym_description, $capacity, $num_trainers,
-        $experience_years, $registrations);
+    // === VALIDATIONS ===
+    if (!filter_var($gym_email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid gym email format.";
+    }
+    if (!preg_match('/^\d{6}$/', $gym_zip)) {
+        $errors[] = "PIN code must be exactly 6 digits.";
+    }
+    if (!preg_match('/^\d{10}$/', $phone) || !preg_match('/^\d{10}$/', $gym_phone)) {
+        $errors[] = "Phone numbers must be 10 digits.";
+    }
 
-    if ($stmt->execute()) {
-        $gym_id = $stmt->insert_id;
+    if (empty($errors)) {
+        // === INSERT GYM ===
+        $stmt = $conn->prepare("INSERT INTO gyms 
+            (owner_id, gym_name, location, phone, timings, facilities, gym_address, gym_state, gym_zip, 
+            gym_phone, gym_email, gym_description, capacity, num_trainers, experience_years, registrations, 
+            status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())");
 
-        // === 3. HANDLE IMAGE UPLOAD ===
-        if (!empty($_FILES['images']['name'][0])) {
-            $uploadDir = "uploads/gyms/";
+        $location = "$area, $city, $gym_state";
+
+        $stmt->bind_param("isssssssssssiiii",
+            $owner_id, $gym_name, $location, $phone, $timings, $facilities, $gym_address,
+            $gymHAS_state, $gym_zip, $gym_phone, $gym_email, $gym_description, $capacity, $num_trainers,
+            $experience_years, $registrations);
+
+        if ($stmt->execute()) {
+            $gym_id = $stmt->insert_id;
+            $stmt->close();
+
+            // === GEOCODING: Address → Lat/Lng ===
+            $fullAddress = trim("$gym_address, $area, $city, $gym_state $gym_zip, India");
+            $fullAddress = urlencode($fullAddress);
+
+            $geoUrl = "https://nominatim.openstreetmap.org/search?format=json&q={$fullAddress}&limit=1";
+            $context = stream_context_create([
+                'http' => [
+                    'header' => "User-Agent: RawFit/1.0\r\n",
+                    'timeout' => 10
+                ]
+            ]);
+            $geoData = @file_get_contents($geoUrl, false, $context);
+
+            $lat = $lng = null;
+            if ($geoData) {
+                $geo = json_decode($geoData, true);
+                if (!empty($geo[0]['lat']) && !empty($geo[0]['lon'])) {
+                    $lat = $geo[0]['lat'];
+                    $lng = $geo[0]['lon'];
+
+                    $geoStmt = $conn->prepare("UPDATE gyms SET lat = ?, lng = ? WHERE gym_id = ?");
+                    $geoStmt->bind_param("ddi", $lat, $lng, $gym_id);
+                    $geoStmt->execute();
+                    $geoStmt->close();
+                }
+            }
+
+            // === HANDLE IMAGE UPLOADS ===
+            $uploadDir = "pari/uploads/gyms/";
             if (!file_exists($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
 
-            foreach ($_FILES['images']['tmp_name'] as $key => $tmpName) {
-                $originalName = basename($_FILES['images']['name'][$key]);
-                $ext = pathinfo($originalName, PATHINFO_EXTENSION);
-                $filename = uniqid('gym_', true) . '.' . strtolower($ext);
-                $targetPath = $uploadDir . $filename;
+            $firstImage = null;
+            $imageFilenames = [];
 
-                if (move_uploaded_file($tmpName, $targetPath)) {
-                    // Insert into gym_images table
-                    $stmt = $conn->prepare("INSERT INTO gym_images (gym_id, filename) VALUES (?, ?)");
-                    $stmt->bind_param("is", $gym_id, $filename);
-                    $stmt->execute();
-                    $stmt->close();
+            if (!empty($_FILES['images']['name'][0])) {
+                foreach ($_FILES['images']['tmp_name'] as $key => $tmpName) {
+                    if ($_FILES['images']['error'][$key] !== UPLOAD_ERR_OK) continue;
+
+                    $originalName = basename($_FILES['images']['name'][$key]);
+                    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                    $filename = uniqid('gym_', true) . '.' . $ext;
+                    $targetPath = $uploadDir . $filename;
+
+                    if (move_uploaded_file($tmpName, $targetPath)) {
+                        $imageFilenames[] = $filename;
+                        if ($key === 0) {
+                            $firstImage = $filename;
+                        }
+                    }
+                }
+
+                // Update main gym image
+                if ($firstImage) {
+                    $updateStmt = $conn->prepare("UPDATE gyms SET gym_image = ? WHERE gym_id = ?");
+                    $updateStmt->bind_param("si", $firstImage, $gym_id);
+                    $updateStmt->execute();
+                    $updateStmt->close();
+                }
+
+                // Save all images to gym_images table
+                if (!empty($imageFilenames)) {
+                    $imgStmt = $conn->prepare("INSERT INTO gym_images (gym_id, filename) VALUES (?, ?)");
+                    foreach ($imageFilenames as $img) {
+                        $imgStmt->bind_param("is", $gym_id, $img);
+                        $imgStmt->execute();
+                    }
+                    $imgStmt->close();
                 }
             }
-        }
 
-        $message = "<div class='success-msg'>Gym details added successfully!</div>";
+            $message = "<div class='success-msg'>Gym submitted successfully! Awaiting admin approval.</div>";
+        } else {
+            $message = "<div class='error-msg'>Error submitting gym. Please try again.</div>";
+        }
     } else {
-        $message = "<div class='error-msg'>Error adding gym. Please try again.</div>";
+        foreach ($errors as $err) {
+            $message .= "<div class='error-msg'>$err</div>";
+        }
     }
 }
 ?>
@@ -87,9 +160,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     body { font-family: 'Inter', sans-serif; }
+    .custom-select-wrapper { position: relative; }
+    .custom-select {
+      @apply w-full px-4 pt-6 pb-3 bg-gray-800/80 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition appearance-none;
+    }
+    .custom-select-wrapper::after {
+      content: '\f078';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #fb923c;
+    }
+    .custom-select option {
+      background: #1a1a1a;
+      color: #e5e7eb;
+      padding: 8px;
+    }
+    .custom-select:focus option:checked {
+      background: #ea580c;
+      color: white;
+    }
   </style>
 </head>
-
 <body class="bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white min-h-screen flex flex-col items-center pt-28 pb-20">
 
   <!-- Navbar -->
@@ -106,10 +202,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="hidden md:flex space-x-10">
-        <a href="owner_home.php" class="text-orange-400 hover:text-orange-300 font-semibold transition flex items-center gap-2">
+        <a href="owner_dashboard.php" class="text-orange-400 hover:text-orange-300 font-semibold transition flex items-center gap-2">
           <i class="fas fa-home"></i> Home
         </a>
-        <a href="display_gym.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
+        <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
           <i class="fas fa-dumbbell"></i> View Gyms
         </a>
       </div>
@@ -126,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-orange-400 via-red-500 to-pink-600 bg-clip-text text-transparent drop-shadow-2xl">
       Add Your Gym
     </h1>
-    <p class="text-gray-400 mt-3 text-lg">Fill in the details to showcase your fitness empire</p>
+    <p class="text-gray-400 mt-3 text-lg">Your gym will be live after admin approval</p>
   </div>
 
   <!-- Glass Card -->
@@ -135,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?= $message ?>
 
     <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6" id="gymForm">
-      <!-- Left Column - Basic Info -->
+      <!-- Left Column -->
       <div class="space-y-6">
         <div class="relative">
           <input type="text" name="gym_name" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
@@ -144,13 +240,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </label>
         </div>
 
+        <!-- State Dropdown -->
+        <div class="relative custom-select-wrapper">
+          <select name="gym_state" id="gym_state" required onchange="updateCities()" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+            <option value="" disabled selected></option>
+            <?php
+            $states = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Puducherry", "Jammu and Kashmir", "Ladakh"];
+            foreach ($states as $state) {
+                echo "<option value='$state'>$state</option>";
+            }
+            ?>
+          </select>
+          <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">State *</label>
+        </div>
+        
+
+        <!-- City Dropdown -->
+        <div class="relative custom-select-wrapper">
+          <select name="city" id="city" required class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+            <option value="" disabled selected></option>
+          </select>
+          <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none">City *</label>
+        </div>
+
+        <!-- Area -->
         <div class="relative">
-          <input type="text" name="location" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+          <input type="text" name="area" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
-            Location Area
+            Area / Locality
           </label>
         </div>
 
+        <!-- Full Address -->
         <div class="relative">
           <input type="text" name="gym_address" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
@@ -158,25 +279,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </label>
         </div>
 
+        <!-- ZIP Code -->
         <div class="relative">
-          <input type="text" name="gym_state" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+          <input type="text" name="gym_zip" required placeholder=" " pattern="\d{6}" maxlength="6" inputmode="numeric" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
-            State
+            PIN Code (6 digits)
           </label>
         </div>
 
-        <div class="relative">
-          <input type="text" name="gym_zip" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
-          <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
-            ZIP Code
-          </label>
-        </div>
-
-        <!-- Left Column Stats -->
+        <!-- Capacity & Registrations -->
         <div class="relative">
           <input type="number" name="capacity" required placeholder=" " min="0" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
-            Maximum Capacity
+            Max Capacity
           </label>
         </div>
 
@@ -188,17 +303,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
 
-      <!-- Right Column - Contact & Additional Info -->
+      <!-- Right Column -->
       <div class="space-y-6">
         <div class="relative">
-          <input type="text" name="phone" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+          <input type="text" name="phone" required placeholder=" " pattern="\d{10}" maxlength="10" inputmode="numeric" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
             Owner Phone
           </label>
         </div>
 
         <div class="relative">
-          <input type="text" name="gym_phone" required placeholder=" " class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+          <input type="text" name="gym_phone" required placeholder=" " pattern="\d{10}" maxlength="10" inputmode="numeric" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
             Gym Contact
           </label>
@@ -225,7 +340,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </label>
         </div>
 
-        <!-- Right Column Stats -->
         <div class="relative">
           <input type="number" name="num_trainers" required placeholder=" " min="0" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
@@ -254,7 +368,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div id="preview" class="flex flex-wrap gap-3 mt-4"></div>
       </div>
 
-      <!-- Gym Description -->
+      <!-- Description -->
       <div class="md:col-span-2">
         <div class="relative">
           <textarea name="gym_description" required placeholder=" " rows="4" 
@@ -273,7 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="md:col-span-2 flex justify-center">
         <button type="submit"
                 class="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 rounded-xl font-bold text-white shadow-lg hover:shadow-orange-600/40 transition-all duration-300 flex items-center justify-center gap-2 text-lg">
-          <i class="fas fa-plus"></i> Add Gym Now
+          <i class="fas fa-paper-plane"></i> Submit for Approval
         </button>
       </div>
     </form>
@@ -284,24 +398,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <i class="fas fa-arrow-left"></i> Back to Dashboard
   </a>
 
-  <!-- Success / Error Messages (Tailwind only) -->
+  <!-- Styles -->
   <style>
     .success-msg {
       @apply bg-gradient-to-r from-green-900/30 to-green-800/20 border border-green-600/40 text-green-300 py-3 px-6 rounded-xl text-center font-semibold animate-pulse;
     }
     .error-msg {
-      @apply bg-gradient-to-r from-red-900/30 to-red-800/20 border border-red-600/40 text-red-300 py-3 px-6 rounded-xl text-center font-semibold animate-pulse;
+      @apply bg-gradient-to-r from-red-900/30 to-red-800/20 border border-red-600/40 text-red-300 py-3 px-6 rounded-xl text-center font-semibold animate-pulse mb-2;
     }
     @keyframes fadeIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:none; } }
     .animate-fadeIn { animation: fadeIn .5s ease-out; }
   </style>
 
   <script>
+    const citiesData = {
+      "Kerala": [
+        "Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Alappuzha", "Palakkad", "Kannur", "Kottayam", "Pathanamthitta",
+        "Idukki", "Malappuram", "Kasaragod", "Wayanad", "Ernakulam", "Thalassery", "Kanhangad", "Payyanur", "Manjeri", "Ponnani",
+        "Parappanangadi", "Tirur", "Malappuram", "Kondotty", "Manjeri", "Perinthalmanna", "Nilambur", "Tanur", "Ponnani", "Kottakkal",
+        "Valanchery", "Kuttippuram", "Edappal", "Chelari", "Vengara", "Areacode", "Edavanna", "Wandoor", "Pandikkad", "Melattur",
+        "Perinthalmanna", "Mankada", "Angadipuram", "Cherpulassery", "Shornur", "Ottapalam", "Pattambi", "Guruvayur", "Chavakkad",
+        "Kunnamkulam", "Wadakkanchery", "Chelakkara", "Alathur", "Vadakkencherry", "Chittur", "Palakkad Town", "Mannarkkad", "Kozhinjampara"
+      ],
+      "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Thane", "Solapur", "Kolhapur"],
+      "Delhi": ["New Delhi", "Dwarka", "Rohini", "South Delhi", "East Delhi"],
+      "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangaluru", "Belagavi"],
+      "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"],
+      "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Gandhinagar"],
+      "Uttar Pradesh": ["Lucknow", "Kanpur", "Agra", "Varanasi", "Meerut", "Noida"],
+      "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Siliguri"],
+      "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Kota", "Ajmer"],
+      "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Chandigarh"],
+      "Telangana": ["Hyderabad", "Warangal", "Nizamabad"],
+      "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore"],
+      "Madhya Pradesh": ["Bhopal", "Indore", "Jabalpur", "Gwalior"],
+      "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur"],
+      "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Berhampur"],
+      "Haryana": ["Gurugram", "Faridabad", "Panipat", "Ambala"],
+      "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad"],
+      "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur"],
+      "Goa": ["Panaji", "Margao", "Vasco da Gama"],
+      "Assam": ["Guwahati", "Dibrugarh", "Silchar"],
+      "Uttarakhand": ["Dehradun", "Haridwar", "Roorkee"],
+      "Himachal Pradesh": ["Shimla", "Manali", "Dharamshala"],
+      "Jammu and Kashmir": ["Srinagar", "Jammu", "Anantnag"],
+      "Puducherry": ["Puducherry", "Karaikal"],
+      "Ladakh": ["Leh", "Kargil"],
+      "Sikkim": ["Gangtok"],
+      "Tripura": ["Agartala"],
+      "Manipur": ["Imphal"],
+      "Meghalaya": ["Shillong"],
+      "Mizoram": ["Aizawl"],
+      "Nagaland": ["Kohima", "Dimapur"],
+      "Arunachal Pradesh": ["Itanagar"]
+    };
+
+    function updateCities() {
+      const state = document.getElementById('gym_state').value;
+      const citySelect = document.getElementById('city');
+      citySelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+
+      setTimeout(() => {
+        citySelect.innerHTML = '<option value="" disabled selected>Select City</option>';
+        if (citiesData[state]) {
+          citiesData[state].forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySelect.appendChild(opt);
+          });
+        }
+      }, 100);
+    }
+
     function previewImages(input) {
       const preview = document.getElementById('preview');
       preview.innerHTML = '';
       Array.from(input.files).forEach(file => {
-        if (file.type.match('image.*')) {
+        if (file.type.match("image.*")) {
           const reader = new FileReader();
           reader.onload = e => {
             const img = document.createElement('img');

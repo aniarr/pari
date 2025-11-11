@@ -11,7 +11,9 @@ $error = "";
 $mode = isset($_GET['action']) && $_GET['action'] === 'register' ? 'register' : 'login';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     if ($mode === 'login') {
+
         $email = trim($_POST['trainer_email']);
         $password = trim($_POST['trainer_password']);
 
@@ -22,15 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($row = $result->fetch_assoc()) {
             if (password_verify($password, $row['trainer_password'])) {
+
                 session_regenerate_id(true);
-                $_SESSION['loggedin']      = true;
-                $_SESSION['role']          = 'trainer';
-                $_SESSION['trainer_id']    = $row['trainer_id'];
+                $_SESSION['loggedin'] = true;
+                $_SESSION['role'] = 'trainer';
+                $_SESSION['trainer_id'] = $row['trainer_id'];
                 $_SESSION['trainer_email'] = $row['trainer_email'];
-                $_SESSION['trainer_name']  = $row['trainer_name'];
+                $_SESSION['trainer_name'] = $row['trainer_name'];
 
                 header("Location: trainerman.php");
                 exit;
+
             } else {
                 $error = "❌ Invalid password.";
             }
@@ -39,35 +43,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } else {
+
+        // Registration
         $name     = trim($_POST['trainer_name']);
         $email    = trim($_POST['trainer_email']);
         $phone    = trim($_POST['trainer_phone']);
         $password = trim($_POST['trainer_password']);
         $hashed   = password_hash($password, PASSWORD_BCRYPT);
 
-        $check = $conn->prepare("SELECT trainer_id FROM trainerlog WHERE trainer_email = ?");
-        $check->bind_param("s", $email);
-        $check->execute();
-        $check->store_result();
+        // ✅ phone validation
+        if (!preg_match("/^[0-9]{10}$/", $phone)) {
+            $error = "❌ Phone number must be exactly 10 digits.";
+        }
 
-        if ($check->num_rows > 0) {
-            $error = "❌ Email already registered.";
-        } else {
-            $stmt = $conn->prepare("INSERT INTO trainerlog (trainer_name, trainer_email, trainer_phone, trainer_password) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $name, $email, $phone, $hashed);
+        if (!$error) {
+            // check email exists
+            $check = $conn->prepare("SELECT trainer_id FROM trainerlog WHERE trainer_email = ?");
+            $check->bind_param("s", $email);
+            $check->execute();
+            $check->store_result();
+
+            if ($check->num_rows > 0) {
+                $error = "❌ Email already registered.";
+            }
+        }
+
+        // ✅ certificate upload
+        $certificate_file = NULL;
+
+        if (!$error && !empty($_FILES['trainer_certificate']['name'])) {
+
+            $allowed = ['pdf', 'jpg', 'jpeg', 'png'];
+            $filename = $_FILES['trainer_certificate']['name'];
+            $tmpname  = $_FILES['trainer_certificate']['tmp_name'];
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+            if (!in_array($ext, $allowed)) {
+                $error = "❌ Only PDF, JPG, JPEG, PNG allowed.";
+            } else {
+                $new_name = time() . "_" . rand(1000, 9999) . "." . $ext;
+
+                if (!file_exists("uploads/certificates")) {
+                    mkdir("uploads/certificates", 0777, true);
+                }
+
+                move_uploaded_file($tmpname, "uploads/certificates/" . $new_name);
+                $certificate_file = $new_name;
+            }
+        }
+
+        if (!$error) {
+
+            $stmt = $conn->prepare("INSERT INTO trainerlog (trainer_name, trainer_email, trainer_phone, trainer_password, certificate_file) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssss", $name, $email, $phone, $hashed, $certificate_file);
 
             if ($stmt->execute()) {
-                $new_trainer_id = $stmt->insert_id;
 
                 session_regenerate_id(true);
                 $_SESSION['loggedin']      = true;
                 $_SESSION['role']          = 'trainer';
-                $_SESSION['trainer_id']    = $new_trainer_id;
+                $_SESSION['trainer_id']    = $stmt->insert_id;
                 $_SESSION['trainer_email'] = $email;
                 $_SESSION['trainer_name']  = $name;
 
                 header("Location: trainerman.php");
                 exit;
+
             } else {
                 $error = "❌ Error: " . $conn->error;
             }
@@ -75,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title><?= $mode === 'login' ? 'Trainer Login' : 'Trainer Register'; ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-900 text-white flex items-center justify-center h-screen">
 
 <div class="bg-gray-800 p-8 rounded-xl w-full max-w-md shadow-lg">
@@ -94,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endif; ?>
 
   <?php if ($mode === 'login'): ?>
-    <!-- LOGIN FORM -->
+
     <form method="POST" class="space-y-4">
       <div>
         <label class="block text-sm font-medium mb-1">Email</label>
@@ -120,8 +163,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </p>
 
   <?php else: ?>
-    <!-- REGISTER FORM -->
-    <form method="POST" class="space-y-4">
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+
       <div>
         <label class="block text-sm font-medium mb-1">Full Name</label>
         <input type="text" name="trainer_name" required class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
@@ -133,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div>
-        <label class="block text-sm font-medium mb-1">Phone</label>
+        <label class="block text-sm font-medium mb-1">Phone (10 digits)</label>
         <input type="text" name="trainer_phone" maxlength="10" required class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
       </div>
 
@@ -146,18 +190,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
 
+      <!-- ✅ Certificate Upload -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Certificate (PDF/JPG/PNG)</label>
+        <input type="file" name="trainer_certificate" accept=".pdf,.jpg,.jpeg,.png"
+               class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+      </div>
+
       <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all">
         Register
       </button>
+
     </form>
 
     <p class="mt-4 text-gray-400 text-sm text-center">
       Already have an account? <a href="?action=login" class="text-orange-400 hover:underline">Login</a>
     </p>
+
   <?php endif; ?>
+
 </div>
 
-<!-- TOGGLE SCRIPT -->
 <script>
 document.querySelectorAll('.toggle-password').forEach(function(el) {
   el.addEventListener('click', function() {

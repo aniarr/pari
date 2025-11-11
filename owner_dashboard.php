@@ -47,11 +47,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['role'] !== 'owner') {
         </div>
         <span class="text-2xl font-bold">RawFit</span>
       </div>
-      <div class="hidden md:flex space-x-6">
-        <a href="owner_dashboard.php" class="text-orange-400 font-medium hover:text-orange-300 transition">Home</a>
-       
-        <a href="gym_profile.php" class="text-gray-300 hover:text-white transition">View Gyms</a>
-      </div>
+  
       <div class="text-gray-300 text-sm">
         <?php echo htmlspecialchars($_SESSION['owner_name'] ?? 'Owner'); ?>
       </div>
@@ -111,7 +107,18 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['role'] !== 'owner') {
       </div>
     </a>
 
-
+      <a href="owner_messages.php" class="group rounded-2xl border border-gray-800 bg-gray-900/60 p-8 hover:bg-gray-900 hover:border-orange-500/50 transition-all shadow-lg hover:shadow-orange-500/20">
+      <div class="flex flex-col items-center text-center space-y-4">
+        <div class="h-14 w-14 flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-red-500 shadow-md shadow-orange-500/30">
+          <svg width="26" height="26" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+            <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5z" />
+            <path d="M12 14c-4.33 0-8 2.17-8 5v3h16v-3c0-2.83-3.67-5-8-5z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold">Enquries</h3>
+        <p class="text-gray-400 text-sm">View or update your owner profile information.</p>
+      </div>
+    </a>
     <a href="logout.php" class="group rounded-2xl border border-gray-800 bg-gray-900/60 p-8 hover:bg-gray-900 hover:border-red-500/60 transition-all shadow-lg hover:shadow-red-500/20">
       <div class="flex flex-col items-center text-center space-y-4">
         <div class="h-14 w-14 flex items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-orange-500 shadow-md shadow-red-500/30">

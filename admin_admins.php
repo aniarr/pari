@@ -290,8 +290,8 @@ function updateNavigation() {
         link.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
     });
 
-    if (currentPage === 'index.php' || currentPage === 'home.php' || currentPage === '') {
-        const homeLinks = document.querySelectorAll('a[href="home.php"], a[href="index.php"]');
+    if (currentPage === 'index.php' || currentPage === 'admin.php' || currentPage === '') {
+        const homeLinks = document.querySelectorAll('a[href="admin.php"], a[href="index.php"]');
         homeLinks.forEach(link => {
             if (link.classList.contains('mobile-nav-link')) {
                 link.classList.add('active', 'text-orange-500');

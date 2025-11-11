@@ -69,39 +69,6 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['role'] !== 'admin') {
     </style>
 </head>
 <body class="bg-gradient-to-br from-black via-gray-900 to-black text-white min-h-screen">
-
-<?php
-session_start();
-
-// Redirect if not logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: home.php");
-    exit();
-}
-
-// Database connection
-$conn = new mysqli("localhost", "root", "", "rawfit");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Get logged-in user's name
-$user_id = $_SESSION['user_id'];
-$sql = "SELECT name FROM register WHERE id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$userName = "User"; // Default name
-if ($row = $result->fetch_assoc()) {
-    $userName = $row['name'];
-}
-
-$stmt->close();
-$conn->close();
-?>
-
 <!-- Navigation -->
 <nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
