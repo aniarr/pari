@@ -192,7 +192,6 @@ $trainers = $stmt->get_result();
     <title>Admin - Trainers | RawFit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         tailwind.config = {
@@ -235,7 +234,7 @@ $trainers = $stmt->get_result();
 <body class="bg-gradient-to-br from-black via-gray-900 to-black text-gray-100 min-h-screen">
 
 <!-- Navigation -->
-<nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
+<nav class="fixed align-center top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
             <div class="flex items-center space-x-3">
@@ -251,8 +250,8 @@ $trainers = $stmt->get_result();
                 <span class="text-white font-bold text-xl">RawFit</span>
             </div>
 
-            <div class="hidden md:flex items-center space-x-8">
-                <a href="admin.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+            <div class="hidden md:flex align-center items-center space-x-8">
+                <a href="admin.php" class="align-center nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                         <polyline points="9,22 9,12 15,12 15,22"/>
@@ -621,7 +620,7 @@ $trainers = $stmt->get_result();
             <input type="hidden" name="course_action" value="approve">
             <p class="mb-4">Course: <span id="approve_title" class="font-medium"></span></p>
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-1">Optional message to trainer</label>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Note</label>
                 <textarea name="admin_message" rows="3" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"></textarea>
             </div>
             <div class="flex gap-3">
