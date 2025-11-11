@@ -88,33 +88,38 @@ tailwind.config = { theme: { extend: { fontFamily: { 'inter': ['Inter', 'sans-se
         </div>
         <span class="text-white font-bold text-xl">RawFit</span>
       </div>
-      <div class="flex space-x-4">
-        <a href="home.php" class="text-white hover:text-orange-500">Home</a>
-        <a href="upload_reel.php" class="text-white hover:text-orange-500">Upload</a>
-        <a href="logout.php" class="text-white hover:text-orange-500">Logout</a>
+      <div class="hidden md:flex space-x-6 text-sm">
+        <a href="home.php" class="text-gray-300 hover:text-orange-500 transition">Home</a>
+        <a href="upload_reel.php" class="text-gray-300 hover:text-orange-500 transition">Upload</a>
+        <a href="logout.php" class="text-gray-300 hover:text-orange-500 transition">Logout</a>
+      </div>
+      <div class="md:hidden flex space-x-4 text-xl">
+        <a href="home.php">Home</a>
+        <a href="upload_reel.php">Upload</a>
+        <a href="logout.php">Exit</a>
       </div>
     </div>
   </div>
 </nav>
 
-<!-- Main Feed -->
-<main class="pt-20">
-  <div class="snap-container scrollbar-hide">
-    <div class="flex flex-col items-center space-y-12 pb-10">
-    <?php if ($result && $result->num_rows > 0): ?>
-      <?php while ($row = $result->fetch_assoc()):
-        $reel_id = $row['id'];
-        $creator_id = $row['creator_id'];
-        $likeCount = $conn->query("SELECT COUNT(*) AS c FROM reel_likes WHERE reel_id=$reel_id")->fetch_assoc()['c'];
-        $isLiked = $conn->query("SELECT id FROM reel_likes WHERE reel_id=$reel_id AND user_id=$user_id")->num_rows > 0;
-        $comments = $conn->query("SELECT rc.comment, rc.created_at, rg.name AS commenter 
-                                  FROM reel_comments rc 
-                                  JOIN register rg ON rc.user_id = rg.id 
-                                  WHERE rc.reel_id = $reel_id 
-                                  ORDER BY rc.created_at DESC LIMIT 3");
-      ?>
-      <section class="reel w-[380px] bg-gray-900 rounded-2xl overflow-hidden shadow-lg">
-        <video muted playsinline loop class="reel-video w-full h-full object-cover cursor-pointer">
+<!-- Reels Feed -->
+<main class="snap-container scrollbar-hide">
+  <?php if ($result && $result->num_rows > 0): ?>
+    <?php while ($row = $result->fetch_assoc()):
+      $reel_id = $row['id'];
+      $likeCount = $conn->query("SELECT COUNT(*) FROM reel_likes WHERE reel_id = $reel_id")->fetch_column();
+      $isLiked = $conn->query("SELECT 1 FROM reel_likes WHERE reel_id = $reel_id AND user_id = $user_id")->num_rows > 0;
+      $commentCount = $conn->query("SELECT COUNT(*) FROM reel_comments WHERE reel_id = $reel_id")->fetch_column();
+      $comments = $conn->query("SELECT rc.comment, rc.created_at, rg.name AS commenter
+                                FROM reel_comments rc
+                                JOIN register rg ON rc.user_id = rg.id
+                                WHERE rc.reel_id = $reel_id
+                                ORDER BY rc.created_at DESC LIMIT 5");
+    ?>
+    <section class="reel">
+      <div class="relative w-full h-full flex items-center justify-center">
+        <!-- Video -->
+        <video muted playsinline loop class="reel-video" id="video-<?= $reel_id ?>">
           <source src="<?= htmlspecialchars($row['video_url']) ?>" type="video/mp4">
         </video>
 

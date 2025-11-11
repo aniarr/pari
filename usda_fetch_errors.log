@@ -7,3 +7,10 @@
 2025-09-26T05:59:40+02:00 - Curl error: (28) SSL connection timeout - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=chicken+breast&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
 2025-09-29T08:54:41+02:00 - Curl error: (28) Operation timed out after 20002 milliseconds with 0 bytes received - URL: https://api.nal.usda.gov/fdc/v1/food/748967?api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
 2025-10-31T09:50:52+01:00 - Curl error: (28) Operation timed out after 20010 milliseconds with 0 bytes received - URL: https://api.nal.usda.gov/fdc/v1/food/748967?api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T09:57:35+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=chappati&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T09:57:35+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=chappati&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T09:57:46+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=egg&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T09:57:46+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=egg&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T09:57:47+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=egg&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T10:26:18+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=Dosa&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP
+2025-11-10T10:26:18+01:00 - Curl error: (6) Could not resolve host: api.nal.usda.gov - URL: https://api.nal.usda.gov/fdc/v1/foods/search?query=Dosa&pageSize=8&api_key=iArAfNU8LJzMVhFz95YcKCeownuyZZpkYcb7WVkP

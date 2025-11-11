@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-/* ---------- AJAX HANDLER (unchanged) ---------- */
+/* ---------- AJAX HANDLER ---------- */
 if (isset($_REQUEST['ajax']) && $_REQUEST['ajax']) {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -19,6 +19,7 @@ if (isset($_REQUEST['ajax']) && $_REQUEST['ajax']) {
     $user_id = intval($_SESSION['user_id']);
     $method  = $_SERVER['REQUEST_METHOD'];
 
+    /* ---------- GET : fetch messages ---------- */
     if ($method === 'GET') {
         $trainer_id = intval($_GET['trainer_id'] ?? 0);
         $course_id  = intval($_GET['course_id'] ?? 0);
@@ -44,11 +45,12 @@ if (isset($_REQUEST['ajax']) && $_REQUEST['ajax']) {
         exit();
     }
 
+    /* ---------- POST : insert new message ---------- */
     if ($method === 'POST') {
-        $payload    = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-        $message    = trim($payload['message'] ?? '');
-        $trainer_id = intval($payload['trainer_id'] ?? 0);
-        $course_id  = intval($payload['course_id'] ?? 0);
+        $payload     = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $message     = trim($payload['message'] ?? '');
+        $trainer_id  = intval($payload['trainer_id'] ?? 0);
+        $course_id   = intval($payload['course_id'] ?? 0);
         $sender_type = ($payload['sender_type'] ?? 'user') === 'trainer' ? 'trainer' : 'user';
 
         if (!$message || !$trainer_id || !$course_id) {
@@ -62,9 +64,23 @@ if (isset($_REQUEST['ajax']) && $_REQUEST['ajax']) {
                 VALUES (?, ?, ?, ?, ?, 0, NOW())");
         $ins->bind_param('iiiss', $user_id, $trainer_id, $course_id, $message, $sender_type);
         $ok = $ins->execute();
+        $new_id = $ins->insert_id;
         $ins->close();
 
-        echo json_encode(['success' => (bool)$ok]);
+        if ($ok && $new_id) {
+            // Return the freshly inserted row
+            $q = $db->prepare("SELECT id, user_id, trainer_id, course_id, message, sender_type, created_at 
+                               FROM trainer_messages WHERE id = ?");
+            $q->bind_param('i', $new_id);
+            $q->execute();
+            $res = $q->get_result();
+            $new_msg = $res->fetch_assoc();
+            $q->close();
+
+            echo json_encode(['success' => true, 'message' => $new_msg]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Insert failed']);
+        }
         $db->close();
         exit();
     }
@@ -106,7 +122,6 @@ $details = $res->fetch_assoc();
 $stmt->close();
 
 if (!$details) {
-    // Safe fallback – user will be redirected to booking page
     header("Location: user_booking.php?course_id=" . $course_id);
     exit();
 }
@@ -184,6 +199,7 @@ $user_id = intval($_SESSION['user_id']);
         const TRAINER_ID      = <?php echo json_encode($trainer_id); ?>;
         const COURSE_ID       = <?php echo json_encode($course_id); ?>;
         let lastMessageId = 0;
+        let isSending = false;
 
         const escapeHtml = str => {
             const div = document.createElement('div');
@@ -218,10 +234,19 @@ $user_id = intval($_SESSION['user_id']);
 
                 if (data.success && Array.isArray(data.messages)) {
                     const msgs = data.messages;
-                    const newer = msgs.filter(m => m.id > lastMessageId);
-                    lastMessageId = Math.max(...msgs.map(m=>m.id), lastMessageId);
 
+                    if (msgs.length === 0) {
+                        container.innerHTML = `<div class="text-center text-gray-500 py-10">
+                            <i class="fas fa-comment-slash text-4xl mb-3"></i>
+                            <p>No messages yet. Start the conversation!</p>
+                        </div>`;
+                        lastMessageId = 0;
+                        return;
+                    }
+
+                    const newer = msgs.filter(m => m.id > lastMessageId);
                     if (newer.length) {
+                        lastMessageId = Math.max(...newer.map(m => m.id), lastMessageId);
                         const frag = document.createDocumentFragment();
                         newer.forEach(m => {
                             const div = document.createElement('div');
@@ -230,11 +255,6 @@ $user_id = intval($_SESSION['user_id']);
                         });
                         container.appendChild(frag);
                         if (atBottom) container.scrollTop = container.scrollHeight;
-                    } else if (msgs.length === 0) {
-                        container.innerHTML = `<div class="text-center text-gray-500 py-10">
-                            <i class="fas fa-comment-slash text-4xl mb-3"></i>
-                            <p>No messages yet. Start the conversation!</p>
-                        </div>`;
                     }
                 }
             } catch (e) { console.error(e); }
@@ -242,34 +262,55 @@ $user_id = intval($_SESSION['user_id']);
 
         document.getElementById('messageForm').addEventListener('submit', async e => {
             e.preventDefault();
+            if (isSending) return;
+            isSending = true;
+
             const textarea = document.getElementById('messageContent');
             const text = textarea.value.trim();
-            if (!text) return;
+            if (!text) { isSending = false; return; }
 
-            // optimistic UI
-            const temp = {id:Date.now(), sender_type:'user', message:text, created_at:new Date().toISOString()};
+            // ---- optimistic UI ----
+            const temp = {id: Date.now(), sender_type: 'user', message: text, created_at: new Date().toISOString()};
             const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.innerHTML = createBubble(temp);
-            container.appendChild(div);
+            const optimisticDiv = document.createElement('div');
+            optimisticDiv.innerHTML = createBubble(temp);
+            container.appendChild(optimisticDiv);
             container.scrollTop = container.scrollHeight;
             textarea.value = '';
 
             try {
                 const r = await fetch('messages.php?ajax=1', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({message:text, trainer_id:TRAINER_ID, course_id:COURSE_ID, sender_type:'user'})
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        trainer_id: TRAINER_ID,
+                        course_id: COURSE_ID,
+                        sender_type: 'user'
+                    })
                 });
                 const res = await r.json();
+
+                // ---- remove optimistic bubble ----
+                optimisticDiv.remove();
+
                 if (!res.success) {
                     alert('Failed to send. Try again.');
-                    div.remove();
-                } else loadMessages(); // replace optimistic with real
+                } else {
+                    // ---- insert real message returned by server ----
+                    const realMsg = res.message;
+                    lastMessageId = Math.max(lastMessageId, realMsg.id);
+
+                    const realDiv = document.createElement('div');
+                    realDiv.innerHTML = createBubble(realMsg);
+                    container.appendChild(realDiv);
+                    container.scrollTop = container.scrollHeight;
+                }
             } catch (err) {
                 console.error(err);
                 alert('Network error.');
-                div.remove();
+            } finally {
+                isSending = false;
             }
         });
 
@@ -280,9 +321,8 @@ $user_id = intval($_SESSION['user_id']);
             ta.style.height = ta.scrollHeight + 'px';
         });
 
-        // poll
-        loadMessages();
-        setInterval(loadMessages, 2500);
+        // ---- initial load + start polling ----
+        loadMessages().then(() => setInterval(loadMessages, 2500));
     </script>
 </body>
 </html>

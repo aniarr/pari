@@ -206,6 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <i class="fas fa-home"></i> Home
         </a>
         <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
+        <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
           <i class="fas fa-dumbbell"></i> View Gyms
         </a>
       </div>

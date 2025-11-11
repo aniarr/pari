@@ -92,7 +92,7 @@ $conn->close();
                             <circle cx="9" cy="7" r="4"/>
                             <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
                         </svg>
-                        <span>Trainers</span>
+                        <span>Courses</span>
                     </a>
                     <a href="display_gym.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -262,7 +262,25 @@ $conn->close();
                             </svg>
                         </div>
                     </div> 
+                    <div onclick="window.location.href='workout.php'" class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300 cursor-pointer group">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                                <path d="M6 9l6 6 6-6"/>
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Workout Management</h3>
+                        <p class="text-gray-400 leading-relaxed">Plan, track, and analyze your workout sessions to achieve your fitness goals efficiently.</p>
+                        <div class="mt-6 flex items-center text-indigo-500 group-hover:text-indigo-400 transition-colors">
+                            <span class="font-medium">Manage Workouts</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2 group-hover:translate-x-1 transition-transform">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </div>
+
                 </div>
+                
             </div>
 
             <!-- Recent Activity removed per request -->

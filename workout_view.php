@@ -53,7 +53,7 @@ $totalSplits = $stmt->fetchColumn();
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: home.php");
+    header("Location: auth.php");
     exit();
 }
 
@@ -120,7 +120,7 @@ $conn->close();
                         <circle cx="9" cy="7" r="4"/>
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
-                    <span>Trainers</span>
+                    <span>Courses</span>
                 </a>
                 <a href="display_gym.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -138,24 +138,41 @@ $conn->close();
                     </a> 
             </div>
 
-            <!-- User Info -->
-            <div class="relative flex items-center space-x-4">
-                <div class="hidden sm:block text-right">
-                    <p class="text-white font-medium" id="userName"><?php echo htmlspecialchars($userName); ?></p>
-                </div>
-                <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center cursor-pointer" id="profileButton">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                </div>
+        <!-- User Info -->
+<div class="relative flex items-center space-x-3">
+    <span class="hidden sm:block text-sm font-medium"><?= htmlspecialchars($userName) ?></span>
+    <div id="profileButton" class="w-9 h-9 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center cursor-pointer shadow-md">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+        </svg>
+    </div>
 
-                <!-- Dropdown Menu -->
-                <div id="profileDropdown" class="absolute top-full right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-md border border-gray-700 rounded-lg shadow-lg hidden z-50">
-                    <a href="profile.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">View Profile</a>
-                    <a href="logout.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">Logout</a>
-                </div>
-            </div>
+    <!-- Dropdown -->
+    <div id="profileDropdown" class="absolute top-full right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md border border-gray-700 rounded-lg shadow-xl hidden z-50">
+        <a href="profile.php" class="block px-4 py-2.5 text-sm text-white hover:bg-gray-700 rounded-t-lg">View Profile</a>
+        <a href="logout.php" class="block px-4 py-2.5 text-sm text-white hover:bg-gray-700 rounded-b-lg">Logout</a>
+    </div>
+</div>
+
+<script>
+  const profileButton = document.getElementById('profileButton');
+  const profileDropdown = document.getElementById('profileDropdown');
+
+  // Toggle dropdown on click
+  profileButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // prevent click from bubbling
+    profileDropdown.classList.toggle('hidden');
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!profileDropdown.contains(e.target) && !profileButton.contains(e.target)) {
+      profileDropdown.classList.add('hidden');
+    }
+  });
+</script>
+
         </div>
 
         <!-- Mobile Navigation -->
