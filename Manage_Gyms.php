@@ -209,18 +209,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="hidden md:flex space-x-10">
-        <a href="owner_dashboard.php" class="text-orange-400 hover:text-orange-300 font-semibold transition flex items-center gap-2">
-          <i class="fas fa-home"></i> Home
+        <a href="owner_dashboard.php" class="text-gray-300 hover:text-orange-500 font-semibold transition flex items-center gap-2">
+        Home
         </a>
-        <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
-          <i class="fas fa-dumbbell"></i> View Gyms
+        <a href="gym_profile.php" class="text-gray-300 hover:text-orange-500 font-medium transition flex items-center gap-2">
+          View Gyms
         </a>
       </div>
 
       <div class="text-orange-300 font-medium text-sm flex items-center gap-2">
-        <i class="fas fa-user-circle"></i>
-        <?php echo htmlspecialchars($_SESSION['owner_name'] ?? 'Owner'); ?>
-      </div>
+
+        <a href="logout.php" class="text-gray-300 hover:text-red-500 transition">Logout</a>
     </div>
   </nav>
 

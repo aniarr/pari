@@ -532,8 +532,7 @@ if (profileButton && profileDropdown) {
                     <select name="role" id="edit_role"
                             class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="user">User</option>
-                        <option value="trainer">Trainer</option>
-                        <option value="admin">Admin</option>
+                   
                     </select>
                 </div>
                 <div class="flex gap-3">

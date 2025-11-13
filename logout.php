@@ -1,13 +1,21 @@
 <?php
+// Prevent caching
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 session_start();
 
-// Destroy the session
-session_unset();
+// Destroy session completely
+$_SESSION = array();
+if (session_id() != '') {
+    setcookie(session_name(), '', time() - 3600, '/');
+}
 session_destroy();
 
-// Redirect to index page
-header("Location: index.php");
-exit();
+// Redirect to home
+header('Location: index.php');
+exit;
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -64,12 +64,11 @@ $result = $stmt->get_result();
         <span class="text-2xl font-bold">RawFit</span>
       </div>
       <div class="hidden md:flex space-x-6">
-        <a href="owner_home.php" class="text-gray-300 hover:text-orange-400 transition">Home</a>
-        <a href="trainer.php" class="text-gray-300 hover:text-orange-400 transition">Trainers</a>
-        <a href="reviews.php" class="text-orange-400 font-medium">Reviews</a>
+        <a href="owner_dashboard.php" class="text-gray-300 hover:text-orange-400 transition">Home</a>
       </div>
       <div class="text-gray-300 text-sm">
-        <?php echo htmlspecialchars($_SESSION['owner_name'] ?? 'Owner'); ?>
+                <a href="logout.php" class="text-gray-300 hover:text-red-500 transition">Logout</a>
+
       </div>
     </div>
   </nav>
@@ -128,10 +127,7 @@ $result = $stmt->get_result();
     <?php endif; ?>
   </section>
 
-  <!-- Footer -->
-  <footer class="border-t border-gray-800 text-center py-6 text-gray-500 text-sm">
-    © <?php echo date('Y'); ?> RawFit. All rights reserved.
-  </footer>
+  
 </body>
 </html>
 

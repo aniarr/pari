@@ -1,5 +1,16 @@
 <?php
+// SECURITY: Prevent caching on protected pages
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 session_start();
+
+// SECURITY: Redirect if not logged in as trainer
+if (!isset($_SESSION['trainer_id']) || $_SESSION['role'] !== 'trainer') {
+    header('Location: trainerlogin.php');
+    exit;
+}
 
 // Database connection
 $conn = new mysqli("localhost", "root", "", "rawfit");
@@ -144,6 +155,7 @@ $conn->close();
                     <span class="text-xs">Trainers</span>
                 </a>
             </div>
+            
         </div>
     </nav>
             <br><br>
@@ -204,7 +216,7 @@ $conn->close();
         </h2>
         <p class="text-gray-400 text-sm mt-1 flex items-center gap-2 justify-center sm:justify-start">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 1-2 2V7a2 2 0 0 1 2-2H5a2 2 0 0 1-2 2v12a2 2 0 0 1 2 2z"/>
           </svg>
           Member since: <?php echo date('F Y', strtotime($userData['created_at'] ?? '2025-08-01')); ?>
         </p>
@@ -432,5 +444,26 @@ $conn->close();
         }
     });
     </script>
+<script>
+// Prevent back-button access after logout (JS fallback)
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        // Page was loaded from cache (back-button)
+        // Verify session is still active
+        fetch('check_session.php')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.valid) {
+                    // Session expired, redirect to login
+                    window.location.href = 'trainerlogin.php';
+                }
+            })
+            .catch(() => {
+                // Network error, assume invalid for safety
+                window.location.href = 'trainerlogin.php';
+            });
+    }
+});
+</script>
 </body>
 </html>

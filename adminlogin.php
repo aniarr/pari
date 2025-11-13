@@ -103,7 +103,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 flex items-center justify-center min-h-screen font-[Inter]">
-
+ <a href="index.php" 
+                            class="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105 z-50"
+                            title="Back to Home">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H9.75A.75.75 0 009 15v6.25a.75.75 0 01-.75.75H3a1 1 0 01-1-1V9.75z" />
+                            </svg>
+                            </a>
 <!-- Glassmorphic Container -->
 <div class="bg-gray-900/70 backdrop-blur-lg border border-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8 space-y-6 transition-all duration-300">
 
@@ -146,7 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <button type="submit"
             class="w-full flex justify-center items-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600
                    text-white font-semibold rounded-lg shadow-lg shadow-orange-500/20 transform hover:scale-[1.02] transition-all">
-      🔐 Login Securely
+       Login Securely
     </button>
   </form>
 
@@ -205,7 +211,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <button type="submit"
             class="w-full flex justify-center items-center gap-2 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600
                    text-white font-semibold rounded-lg shadow-lg shadow-orange-500/20 transform hover:scale-[1.02] transition-all">
-      🚀 Register Admin
+       Register Admin
     </button>
   </form>
 
@@ -216,7 +222,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </button>
   </div>
 
-  <p class="text-center text-gray-500 text-xs mt-4">© <?= date('Y'); ?> RawFit. All rights reserved.</p>
 </div>
 
 <script>

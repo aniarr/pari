@@ -166,7 +166,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['role'] !== 'admin') {
            
                 <!-- Dropdown Menu -->
            
-                    <a href="logout.php" class="block px-4 py-2 text-white hover:bg-gray-700 transition-colors">Logout</a>
+                    <a href="logout.php" class="block px-4 py-2 text-white hover:text-red-300 transition-colors">Logout</a>
                 
             </div>
         </div>

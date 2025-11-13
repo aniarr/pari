@@ -100,18 +100,14 @@ $owner_id = $_SESSION['owner_id'];
 
                 <!-- Navigation Links -->
                 <div class="hidden md:flex items-center space-x-6">
-                    <a href="owner_dashboard.php" class="text-gray-300 hover:text-white transition">Home</a>
-                    <a href="Manage_Gyms.php" class="text-gray-300 hover:text-white transition">Add Gym</a>
+                    <a href="owner_dashboard.php" class="text-gray-300 hover:text-orange-500 transition">Home</a>
+                    <a href="Manage_Gyms.php" class="text-gray-300 hover:text-orange-500 transition">Add Gym</a>
                 </div>
 
                 <!-- Profile -->
                 <div class="flex items-center space-x-4">
-                    <a href="logout.php" class="text-gray-300 hover:text-white transition">Logout</a>
-                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
-                    </div>
+                    <a href="logout.php" class="text-gray-300 hover:text-red-500 transition">Logout</a>
+                    
                 </div>
             </div>
         </div>
@@ -290,7 +286,6 @@ $owner_id = $_SESSION['owner_id'];
     <!-- Footer -->
     <footer class="mt-16 border-t border-gray-800 py-8">
         <div class="max-w-7xl mx-auto px-4 text-center sm:px-6 lg:px-8">
-            <p class="text-sm text-gray-500">&copy; 2025 RawFit. All rights reserved.</p>
         </div>
     </footer>
 </body>

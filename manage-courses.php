@@ -1,3 +1,115 @@
+<?php
+session_start();
+
+// Redirect if not logged in
+if (!isset($_SESSION['trainer_id'])) {
+    header("Location: trainer_login.php");
+    exit();
+}
+
+// Database connection (PDO)
+$host = 'localhost';
+$dbname = 'rawfit';
+$username = 'root';
+$password = '';
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
+}
+
+$trainer_id = $_SESSION['trainer_id'];
+
+// Fetch trainer details
+$stmt = $pdo->prepare("SELECT name, trainer_image FROM trainer_details WHERE id = ?");
+$stmt->execute([$trainer_id]);
+$trainer = $stmt->fetch(PDO::FETCH_ASSOC);
+$trainer_name = $trainer['name'] ?? 'Trainer';
+$trainer_image = !empty($trainer['trainer_image']) ? $trainer['trainer_image'] : 'default-avatar.png';
+
+// Handle Edit Submission
+$message = '';
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['edit_course'])) {
+    $id = $_POST['id'];
+    $title = trim($_POST['title']);
+    $description = trim($_POST['description']);
+    $category = $_POST['category'];
+    $duration = (int)$_POST['duration'];
+    $start_date = $_POST['start_date'];
+    $end_date = $_POST['end_date'] ?: null;
+    $image = $_FILES['image'] ?? null;
+
+    // Validation
+    $errors = [];
+    if (empty($title)) $errors[] = "Title is required.";
+    if (empty($description)) $errors[] = "Description is required.";
+    if (!in_array($category, ['strength','cardio','yoga','boxing','crossfit','nutrition'])) $errors[] = "Invalid category.";
+    if ($duration < 1 || $duration > 52) $errors[] = "Duration must be 1–52 weeks.";
+    if (empty($start_date)) $errors[] = "Start date is required.";
+
+    $image_path = null;
+    if ($image && $image['error'] == UPLOAD_ERR_OK) {
+        $allowed = ['image/jpeg','image/png','image/gif'];
+        if (!in_array($image['type'], $allowed)) {
+            $errors[] = "Only JPG, PNG, GIF allowed.";
+        } elseif ($image['size'] > 5*1024*1024) {
+            $errors[] = "Image too large (max 5MB).";
+        } else {
+            $upload_dir = "uploads/";
+            if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
+            $image_path = uniqid('img_') . '.' . pathinfo($image['name'], PATHINFO_EXTENSION);
+            if (!move_uploaded_file($image['tmp_name'], $upload_dir . $image_path)) {
+                $errors[] = "Failed to upload image.";
+            }
+        }
+    }
+
+    if (empty($errors)) {
+        // Fetch current image to preserve if no new upload
+        $stmt = $pdo->prepare("SELECT image_path FROM trainer_courses WHERE id = ? AND trainer_id = ?");
+        $stmt->execute([$id, $trainer_id]);
+        $current = $stmt->fetchColumn();
+        $final_image = $image_path ?: $current;
+
+        $stmt = $pdo->prepare("UPDATE trainer_courses SET title=?, description=?, category=?, duration=?, start_date=?, end_date=?, image_path=? WHERE id=? AND trainer_id=?");
+        $stmt->execute([$title, $description, $category, $duration, $start_date, $end_date, $final_image, $id, $trainer_id]);
+        $message = "Course updated successfully!";
+        header("Location: all_courses.php?success=1");
+        exit();
+    } else {
+        $message = "Errors: " . implode(" ", $errors);
+    }
+}
+
+// Handle Delete
+if (isset($_GET['delete'], $_GET['id'])) {
+    $id = (int)$_GET['id'];
+    $stmt = $pdo->prepare("DELETE FROM trainer_courses WHERE id = ? AND trainer_id = ?");
+    $stmt->execute([$id, $trainer_id]);
+    header("Location: all_courses.php?deleted=1");
+    exit();
+}
+
+// Fetch all courses
+$stmt = $pdo->prepare("SELECT * FROM trainer_courses WHERE trainer_id = ? ORDER BY created_at DESC");
+$stmt->execute([$trainer_id]);
+$courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Edit mode
+$edit_course = null;
+if (isset($_GET['edit'], $_GET['id'])) {
+    $edit_id = (int)$_GET['id'];
+    foreach ($courses as $c) {
+        if ($c['id'] == $edit_id) {
+            $edit_course = $c;
+            break;
+        }
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,131 +124,14 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        'inter': ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: '#F97316', // Orange-500
-                        secondary: '#EF4444', // Red-500
-                    }
+                    fontFamily: { 'inter': ['Inter', 'sans-serif'] },
+                    colors: { primary: '#F97316', secondary: '#EF4444' }
                 }
             }
         }
     </script>
 </head>
 <body class="bg-gray-900 font-inter text-gray-100 min-h-screen">
-    <?php
-    session_start();
-
-    // Redirect if not logged in or not a trainer
-    if (!isset($_SESSION['trainer_id'])) {
-        header("Location: login.php");
-        exit();
-    }
-
-    // Database connection
-    $conn = new mysqli("localhost", "root", "", "rawfit");
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Handle form submission for editing
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['edit_course'])) {
-        $id = $_POST['id'];
-        $title = $_POST['title'];
-        $description = $_POST['description'];
-        $category = $_POST['category'];
-        $duration = $_POST['duration'];
-        $start_date = $_POST['start_date'];
-        $end_date = $_POST['end_date'];
-        $image = $_FILES['image'];
-
-        // Handle image upload if new image is provided
-        $image_path = null;
-        if ($image && $image['error'] == UPLOAD_ERR_OK) {
-            $upload_dir = "uploads/";
-            if (!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
-            $image_name = uniqid() . '_' . basename($image['name']);
-            $target_file = $upload_dir . $image_name;
-            if (move_uploaded_file($image['tmp_name'], $target_file)) {
-                $image_path = $image_name;
-            }
-        }
-
-        // Update course in database
-        $stmt = $conn->prepare("UPDATE trainer_courses SET title = ?, description = ?, category = ?, duration = ?, start_date = ?, end_date = ?, image_path = ? WHERE id = ? AND trainer_id = ?");
-        $stmt->bind_param("sssissssi", $title, $description, $category, $duration, $start_date, $end_date, $image_path, $id, $_SESSION['trainer_id']);
-        $stmt->execute();
-        $stmt->close();
-
-        // Redirect to refresh the page
-        header("Location: all_courses.php");
-        exit();
-    }
-
-    // Handle delete action
-    if (isset($_GET['delete']) && isset($_GET['id'])) {
-        $id = $_GET['id'];
-        $stmt = $conn->prepare("DELETE FROM trainer_courses WHERE id = ? AND trainer_id = ?");
-        $stmt->bind_param("ii", $id, $_SESSION['trainer_id']);
-        $stmt->execute();
-        $stmt->close();
-        header("Location: all_courses.php");
-        exit();
-    }
-
-    // Fetch all courses
-    $courses = [];
-    $sql = "SELECT id, trainer_id, title, description, category, duration, start_date, end_date, image_path, created_at 
-            FROM trainer_courses WHERE trainer_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $_SESSION['trainer_id']);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            $courses[] = $row;
-        }
-    }
-
-    $stmt->close();
-    $conn->close();
-    ?>
-    <?php
-session_start();
-
-// Check login
-if (!isset($_SESSION['trainer_id'])) {
-    header("Location: trainer_login.php");
-    exit();
-}
-
-// Database connection
-$host = 'localhost';
-$dbname = 'rawfit';
-$username = 'root';
-$password = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
-}
-
-// ✅ Fetch trainer details for navbar
-$trainer_id = $_SESSION['trainer_id'];
-$stmt = $pdo->prepare("SELECT name, trainer_image FROM trainer_details WHERE id = ?");
-$stmt->execute([$trainer_id]);
-$trainer = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Default image fallback
-if (!$trainer || empty($trainer['trainer_image'])) {
-    $trainer['trainer_image'] = 'default-avatar.png';
-}
-?>
-
 
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
@@ -150,40 +145,37 @@ if (!$trainer || empty($trainer['trainer_image'])) {
                     </div>
                     <span class="text-white font-bold text-xl">Rawfit</span>
                 </div>
-                
-                <!-- Navigation Links -->
+
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="trainerman.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <a href="trainerman.php" class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                             <polyline points="9,22 9,12 15,12 15,22"/>
                         </svg>
                         <span>Home</span>
                     </a>
-                    <a href="manage-courses.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <a href="manage-courses.php" class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
                             <path d="M12 18h.01"/>
                         </svg>
-                        <span>Course</span>
+                        <span>Courses</span>
                     </a>
-          
                 </div>
 
-               <!-- Profile Menu -->
+                <!-- Profile Dropdown -->
                 <div class="relative">
                     <button id="profile-menu-button" class="flex items-center space-x-3 text-sm rounded-lg px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                       <img class="h-8 w-8 rounded-full object-cover"
-                                src="uploads/<?php echo htmlspecialchars($trainer['trainer_image']); ?>"
-                                alt="<?php echo htmlspecialchars($trainer['name']); ?>">
-                            <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer['name']); ?></span>
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <img class="h-8 w-8 rounded-full object-cover"
+                             src="uploads/<?php echo htmlspecialchars($trainer_image); ?>"
+                             alt="<?php echo htmlspecialchars($trainer_name); ?>">
+                        <span class="hidden md:block font-medium"><?php echo htmlspecialchars($trainer_name); ?></span>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
-                    
-                    <!-- Dropdown Menu -->
-                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 py-1 z-50">
+
+                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 py-1 z-50 shadow-xl">
                         <a href="trainer_profile.php" class="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
                             <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -206,90 +198,94 @@ if (!$trainer || empty($trainer['trainer_image'])) {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
             <h1 class="text-2xl font-bold text-white mb-6">All Courses</h1>
-            <br>
-            <?php if (isset($_GET['edit']) && isset($_GET['id'])) {
-                $edit_id = $_GET['id'];
-                $edit_course = null;
-                foreach ($courses as $course) {
-                    if ($course['id'] == $edit_id) {
-                        $edit_course = $course;
-                        break;
-                    }
-                }
-                if ($edit_course): ?>
-                    <form method="POST" enctype="multipart/form-data" class="space-y-6">
-                        <input type="hidden" name="id" value="<?php echo htmlspecialchars($edit_course['id']); ?>">
-                        <div>
-                            <label for="title" class="block text-sm font-medium text-gray-300">Course Title</label>
-                            <input type="text" name="title" id="title" value="<?php echo htmlspecialchars($edit_course['title']); ?>" 
-                                   class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                        </div>
-                        <div>
-                            <label for="description" class="block text-sm font-medium text-gray-300">Description</label>
-                            <textarea name="description" id="description" rows="3" 
-                                      class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary"><?php echo htmlspecialchars($edit_course['description']); ?></textarea>
-                        </div>
-                        <div>
-                            <label for="category" class="block text-sm font-medium text-gray-300">Category</label>
-                            <select name="category" id="category" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                                <option value="strength" <?php echo $edit_course['category'] === 'strength' ? 'selected' : ''; ?>>Strength Training</option>
-                                <option value="cardio" <?php echo $edit_course['category'] === 'cardio' ? 'selected' : ''; ?>>Cardio & HIIT</option>
-                                <option value="yoga" <?php echo $edit_course['category'] === 'yoga' ? 'selected' : ''; ?>>Yoga & Flexibility</option>
-                                <option value="boxing" <?php echo $edit_course['category'] === 'boxing' ? 'selected' : ''; ?>>Boxing</option>
-                                <option value="crossfit" <?php echo $edit_course['category'] === 'crossfit' ? 'selected' : ''; ?>>CrossFit</option>
-                                <option value="nutrition" <?php echo $edit_course['category'] === 'nutrition' ? 'selected' : ''; ?>>Nutrition</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="duration" class="block text-sm font-medium text-gray-300">Duration (weeks)</label>
-                            <input type="number" name="duration" id="duration" min="1" max="52" value="<?php echo htmlspecialchars($edit_course['duration']); ?>" 
-                                   class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                        </div>
-                        <div>
-                            <label for="start_date" class="block text-sm font-medium text-gray-300">Start Date</label>
-                            <input type="date" name="start_date" id="start_date" value="<?php echo htmlspecialchars($edit_course['start_date']); ?>" 
-                                   class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                        </div>
-                        <div>
-                            <label for="end_date" class="block text-sm font-medium text-gray-300">End Date</label>
-                            <input type="date" name="end_date" id="end_date" value="<?php echo htmlspecialchars($edit_course['end_date']); ?>" 
-                                   class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                        </div>
-                        <div>
-                            <label for="image" class="block text-sm font-medium text-gray-300">Course Image (optional)</label>
-                            <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/gif" 
-                                   class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                            <?php if ($edit_course['image_path']): ?>
-                                <img src="uploads/<?php echo htmlspecialchars($edit_course['image_path']); ?>" alt="Current Image" class="mt-2 w-32 h-32 object-cover rounded">
-                            <?php endif; ?>
-                        </div>
-                        <button type="submit" name="edit_course" class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+
+            <?php if (isset($_GET['success'])): ?>
+                <div class="mb-4 p-3 bg-green-500/20 text-green-300 rounded-lg">Course updated successfully!</div>
+            <?php elseif (isset($_GET['deleted'])): ?>
+                <div class="mb-4 p-3 bg-red-500/20 text-red-300 rounded-lg">Course deleted.</div>
+            <?php elseif ($message): ?>
+                <div class="mb-4 p-3 bg-red-500/20 text-red-300 rounded-lg"><?php echo htmlspecialchars($message); ?></div>
+            <?php endif; ?>
+
+            <?php if ($edit_course): ?>
+                <!-- Edit Form -->
+                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <input type="hidden" name="id" value="<?php echo $edit_course['id']; ?>">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Title</label>
+                        <input type="text" name="title" required value="<?php echo htmlspecialchars($edit_course['title']); ?>"
+                               class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Description</label>
+                        <textarea name="description" rows="3" required
+                                  class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-primary"><?php echo htmlspecialchars($edit_course['description']); ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Category</label>
+                        <select name="category" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white">
+                            <?php
+                            $cats = ['strength'=>'Strength Training','cardio'=>'Cardio & HIIT','yoga'=>'Yoga & Flexibility','boxing'=>'Boxing','crossfit'=>'CrossFit','nutrition'=>'Nutrition'];
+                            foreach ($cats as $val => $label):
+                            ?>
+                                <option value="<?php echo $val; ?>" <?php echo $edit_course['category'] === $val ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Duration (weeks)</label>
+                        <input type="number" name="duration" min="1" max="52" required value="<?php echo $edit_course['duration']; ?>"
+                               class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Start Date</label>
+                        <input type="date" name="start_date" required value="<?php echo $edit_course['start_date']; ?>"
+                               class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">End Date (optional)</label>
+                        <input type="date" name="end_date" value="<?php echo $edit_course['end_date']; ?>"
+                               class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Image (optional)</label>
+                        <?php if ($edit_course['image_path']): ?>
+                            <img src="uploads/<?php echo htmlspecialchars($edit_course['image_path']); ?>" alt="Current" class="h-32 mt-2 rounded">
+                        <?php endif; ?>
+                        <input type="file" name="image" accept="image/*" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white">
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="submit" name="edit_course" class="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-orange-600">
                             Save Changes
                         </button>
-                        <a href="all_courses.php" class="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 text-center block mt-2">
+                        <a href="all_courses.php" class="flex-1 bg-gray-600 text-white py-2 rounded-lg text-center hover:bg-gray-700">
                             Cancel
                         </a>
-                    </form>
-                <?php else: ?>
-                    <p class="text-gray-400 text-center py-6">Course not found.</p>
-                <?php endif;
-            } else { ?>
+                    </div>
+                </form>
+            <?php else: ?>
+                <!-- Course Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <?php foreach ($courses as $course): ?>
-                        <div class="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-                            <img src="<?php echo $course['image_path'] ? "uploads/" . htmlspecialchars($course['image_path']) : "https://via.placeholder.com/300x200"; ?>" alt="<?php echo htmlspecialchars($course['title']); ?>" class="w-full h-40 object-cover rounded-t-lg">
+                        <div class="bg-gray-700/50 rounded-lg overflow-hidden border border-gray-600">
+                            <img src="<?php echo $course['image_path'] ? 'uploads/' . htmlspecialchars($course['image_path']) : 'https://via.placeholder.com/300x200/333/fff?text=No+Image'; ?>"
+                                 alt="<?php echo htmlspecialchars($course['title']); ?>" class="w-full h-48 object-cover">
                             <div class="p-4">
                                 <h3 class="text-lg font-semibold text-white"><?php echo htmlspecialchars($course['title']); ?></h3>
-                                <p class="text-gray-400 text-sm mb-2">Category: <?php echo htmlspecialchars($course['category']); ?></p>
-                                <p class="text-gray-400 text-sm mb-2">Duration: <?php echo htmlspecialchars($course['duration']); ?> weeks</p>
-                                <p class="text-gray-400 text-sm mb-2">Start: <?php echo htmlspecialchars($course['start_date']); ?></p>
-                                <p class="text-gray-400 text-sm mb-2">End: <?php echo htmlspecialchars($course['end_date']); ?></p>
-                                <p class="text-gray-400 text-sm mb-4">Created: <?php echo htmlspecialchars($course['created_at']); ?></p>
-                                <div class="flex space-x-2">
-                                    <a href="edit_course.php?edit=true&id=<?php echo $course['id']; ?>" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-orange-600 text-center">
+                                <p class="text-sm text-gray-400">Category: <?php echo ucfirst(htmlspecialchars($course['category'])); ?></p>
+                                <p class="text-sm text-gray-400">Duration: <?php echo $course['duration']; ?> weeks</p>
+                                <p class="text-sm text-gray-400">Start: <?php echo date('M j, Y', strtotime($course['start_date'])); ?></p>
+                                <?php if ($course['end_date']): ?>
+                                    <p class="text-sm text-gray-400">End: <?php echo date('M j, Y', strtotime($course['end_date'])); ?></p>
+                                <?php endif; ?>
+                                <div class="mt-4 flex space-x-2">
+                                    <a href="all_courses.php?edit=1&id=<?php echo $course['id']; ?>"
+                                       class="flex-1 bg-primary text-white text-center py-2 rounded hover:bg-orange-600 text-sm">
                                         Edit
                                     </a>
-                                    <a href="edit_course.php?delete=true&id=<?php echo $course['id']; ?>" class="flex-1 bg-secondary text-white py-2 px-4 rounded-lg hover:bg-red-600 text-center" onclick="return confirm('Are you sure you want to delete this course?');">
+                                    <a href="all_courses.php?delete=1&id=<?php echo $course['id']; ?>"
+                                       class="flex-1 bg-secondary text-white text-center py-2 rounded hover:bg-red-600 text-sm"
+                                       onclick="return confirm('Delete this course?');">
                                         Delete
                                     </a>
                                 </div>
@@ -298,10 +294,29 @@ if (!$trainer || empty($trainer['trainer_image'])) {
                     <?php endforeach; ?>
                 </div>
                 <?php if (empty($courses)): ?>
-                    <p class="text-gray-400 text-center py-6">No courses found.</p>
+                    <p class="text-center text-gray-400 py-10">No courses yet. <a href="edit_course.php" class="text-primary underline">Add one</a>.</p>
                 <?php endif; ?>
-            <?php } ?>
+            <?php endif; ?>
         </div>
     </div>
+
+    <!-- Dropdown Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const button = document.getElementById('profile-menu-button');
+            const dropdown = document.getElementById('profile-dropdown');
+
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -153,6 +153,13 @@ $conn->close();
         <div class="bg-gray-800 rounded-2xl p-10 shadow-2xl">
             <div class="font-['M_PLUS_Rounded_1c'] text-3xl text-center mb-2 p-2 font-bold text-orange-500"><?php echo strtoupper($action); ?></div>
             <div class="text-sm text-center mb-8 text-gray-500">Please enter your details</div>
+             <a href="index.php" 
+                            class="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105 z-50"
+                            title="Back to Home">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H9.75A.75.75 0 009 15v6.25a.75.75 0 01-.75.75H3a1 1 0 01-1-1V9.75z" />
+                            </svg>
+                            </a>
 
             <?php if ($error): ?>
                 <p class="text-red-400 text-center bg-red-500/10 p-2 rounded-lg mb-5"><?php echo $error; ?></p>

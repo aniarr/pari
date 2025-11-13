@@ -179,10 +179,9 @@ if ($active_gym_id && $active_user_id) {
             <span class="font-bold text-xl">RawFit Owner</span>
         </div>
         <div class="hidden md:flex items-center space-x-6">
-            <a href="owner_dashboard.php" class="text-gray-300 hover:text-white">Dashboard</a>
-            <a href="owner_gym.php" class="text-gray-300 hover:text-white">My Gym</a>
-            <a href="owner_messages.php" class="text-orange-400 font-medium">Enquiries</a>
-            <a href="logout_owner.php" class="text-gray-300 hover:text-white">Logout</a>
+            <a href="owner_dashboard.php" class="text-gray-300 hover:text-orange-500 align-center">Home</a>
+            
+            <a href="logout.php" class="text-gray-300 hover:text-red-500">Logout</a>
         </div>
     </div>
 </nav>

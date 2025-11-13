@@ -184,16 +184,12 @@ $images = $img_stmt->get_result();
             <span class="text-xl font-bold">RawFit</span>
         </div>
         <div class="hidden md:flex items-center space-x-6">
-            <a href="owner_dashboard.php" class="text-gray-300 hover:text-white">Home</a>
-            <a href="Manage_Gyms.php" class="text-gray-300 hover:text-white">Add Gym</a>
+            <a href="owner_dashboard.php" class="text-gray-300 hover:text-orange-500">Home</a>
+            <a href="Manage_Gyms.php" class="text-gray-300 hover:text-orange-500">Add Gym</a>
         </div>
         <div class="flex items-center space-x-4">
-            <a href="logout.php" class="text-gray-300 hover:text-white">Logout</a>
-            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-            </div>
+            <a href="logout.php" class="text-gray-300 hover:text-red-500">Logout</a>
+        
         </div>
     </div>
 </nav>
@@ -327,20 +323,24 @@ $images = $img_stmt->get_result();
             <h2 class="text-xl font-semibold mb-6">Gym Photos</h2>
 
             <?php if ($images->num_rows): ?>
-                <p class="text-sm text-gray-400 mb-3">Check to delete:</p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <p class="text-sm text-gray-400 mb-3">Click delete icon to remove:</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="gymImagesGrid">
                     <?php while ($img = $images->fetch_assoc()): ?>
-                        <label class="relative group cursor-pointer">
-                            <input type="checkbox" name="delete_images[]" value="<?= $img['id'] ?>" class="sr-only">
+                        <div class="relative group cursor-pointer image-card" data-image-id="<?= $img['id'] ?>">
                             <img src="uploads/gyms/<?= htmlspecialchars($img['filename']) ?>"
                                  alt="gym photo"
-                                 class="w-full h-32 object-cover rounded-lg border-2 border-gray-600 group-hover:border-red-500 transition">
-                            <div class="absolute inset-0 bg-red-600/70 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition">
+                                 class="w-full h-32 object-cover rounded-lg border-2 border-gray-600 group-hover:border-red-500 transition"
+                                 onerror="this.src='assets/no-image.png'; this.onerror=null;">
+                            <button type="button" 
+                                    class="delete-image-btn absolute inset-0 bg-red-600/70 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition w-full h-full hover:bg-red-700/80"
+                                    data-image-id="<?= $img['id'] ?>"
+                                    data-gym-id="<?= $gym_id ?>"
+                                    title="Delete this image">
                                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
-                            </div>
-                        </label>
+                            </button>
+                        </div>
                     <?php endwhile; $images->data_seek(0); ?>
                 </div>
             <?php else: ?>
@@ -371,5 +371,85 @@ $images = $img_stmt->get_result();
 $img_stmt->close();
 $conn->close();
 ?>
+
+<script>
+// Delete gym images via AJAX
+document.querySelectorAll('.delete-image-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const imageId = this.dataset.imageId;
+        const gymId = this.dataset.gymId;
+
+        if (!confirm('Delete this image permanently?')) return;
+
+        const formData = new FormData();
+        formData.append('image_id', imageId);
+        formData.append('gym_id', gymId);
+
+        fetch('delete_gym_image.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remove image card from DOM with smooth animation
+                const card = document.querySelector(`.image-card[data-image-id="${imageId}"]`);
+                if (card) {
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        if (card.parentNode) card.remove();
+                        
+                        // Show success toast if available
+                        if (typeof showNotification === 'function') {
+                            showNotification('Image deleted successfully', 'success');
+                        }
+                    }, 300);
+                }
+            } else {
+                alert('Failed to delete image: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Error deleting image: ' + err.message);
+        });
+    });
+});
+
+// Helper function if showNotification doesn't exist
+function showNotification(msg, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-20 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all text-white font-medium ${
+        type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500')
+    }`;
+    notification.textContent = msg;
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(100%)';
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
 </body>
 </html>

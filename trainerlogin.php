@@ -152,7 +152,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 
 <body class="bg-gray-900 text-white flex items-center justify-center h-screen">
-
+ <a href="index.php" 
+                            class="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105 z-50"
+                            title="Back to Home">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a1 1 0 01-1 1h-5.25a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H9.75A.75.75 0 009 15v6.25a.75.75 0 01-.75.75H3a1 1 0 01-1-1V9.75z" />
+                            </svg>
+                            </a>
 <div class="bg-gray-800 p-8 rounded-xl w-full max-w-md shadow-lg">
   <h2 class="text-4xl px-4 py-2 md:text-5xl font-extrabold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent animate-pulse shadow-lg mb-6 text-center">
     <?= $mode === 'login' ? 'Trainer Login' : 'Trainer Register'; ?>
