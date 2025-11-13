@@ -21,16 +21,19 @@ if ($conn->connect_error) {
     die('DB Error: ' . $conn->connect_error);
 }
 
-// === CREATE TABLE IF NOT EXISTS ===
+// === ENSURE TABLE + is_read COLUMN ===
 $conn->query("CREATE TABLE IF NOT EXISTS gym_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     gym_id INT NOT NULL,
     user_id INT NOT NULL,
-    sender_type ENUM('user', 'gym') NOT NULL,
+    sender_type ENUM('user', 'owner') NOT NULL,
     message TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX(gym_id), INDEX(user_id)
+    is_read TINYINT(1) DEFAULT 0,
+    INDEX(gym_id), INDEX(user_id), INDEX(sender_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+$conn->query("ALTER TABLE gym_messages ADD COLUMN IF NOT EXISTS is_read TINYINT(1) DEFAULT 0");
 
 // === FETCH GYM NAME ===
 $stmt = $conn->prepare('SELECT gym_name FROM gyms WHERE gym_id = ? AND status = 1');
@@ -44,7 +47,7 @@ if (!$gym) {
 }
 $gym_name = htmlspecialchars($gym['gym_name']);
 
-// === AJAX HANDLER: SEND MESSAGE ===
+// === AJAX: SEND MESSAGE ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
     header('Content-Type: application/json');
     $message = trim($_POST['message'] ?? '');
@@ -53,16 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
         exit;
     }
 
-    $stmt = $conn->prepare('INSERT INTO gym_messages (gym_id, user_id, sender_type, message) VALUES (?, ?, "user", ?)');
+    $stmt = $conn->prepare('INSERT INTO gym_messages (gym_id, user_id, sender_type, message, is_read) VALUES (?, ?, "user", ?, 0)');
     $stmt->bind_param('iis', $gym_id, $user_id, $message);
     $success = $stmt->execute();
+    $new_id = $stmt->insert_id; // ← Get inserted ID
     $stmt->close();
 
-    echo json_encode(['success' => $success]);
+    echo json_encode(['success' => $success, 'id' => $new_id]);
     exit;
 }
 
-// === AJAX HANDLER: GET MESSAGES ===
+// === AJAX: GET MESSAGES ===
 if (isset($_GET['get_messages'])) {
     header('Content-Type: application/json');
     $since = (int)($_GET['since'] ?? 0);
@@ -91,6 +95,9 @@ if (isset($_GET['get_messages'])) {
         $messages[] = $row;
     }
     $stmt->close();
+
+    // Mark owner messages as read when user opens chat
+    $conn->query("UPDATE gym_messages SET is_read = 1 WHERE gym_id = $gym_id AND user_id = $user_id AND sender_type = 'owner' AND is_read = 0");
 
     echo json_encode(['messages' => $messages]);
     exit;
@@ -128,7 +135,7 @@ if (isset($_GET['get_messages'])) {
       </div>
       <span class="font-bold text-xl">RawFit</span>
     </div>
-    <a href="display_gym.php" class="text-sm text-gray-300 hover:text-white">&larr; Back to Gyms</a>
+    <a href="display_gym.php" class="text-sm text-gray-300 hover:text-white">← Back to Gyms</a>
   </div>
 </nav>
 
@@ -188,6 +195,7 @@ const chatForm = document.getElementById('chatForm');
 const gymId = <?= $gym_id ?>;
 const userId = <?= $user_id ?>;
 let lastMsgId = 0;
+let lastSentMsgId = 0; // Track the message we just sent
 
 // Auto-resize textarea
 messageInput.addEventListener('input', function () {
@@ -207,7 +215,12 @@ function formatTime(date) {
 }
 
 // Append message
-function appendMessage(text, sender, time) {
+function appendMessage(text, sender, time, msgId = null) {
+  // Skip if this is the message we just sent optimistically
+  if (msgId && msgId === lastSentMsgId) {
+    return;
+  }
+
   const isUser = sender === 'user';
   const bubble = document.createElement('div');
   bubble.className = `flex ${isUser ? 'justify-end' : 'justify-start'} mb-3 animate-fadeIn`;
@@ -233,7 +246,7 @@ chatForm.addEventListener('submit', async (e) => {
   const msg = messageInput.value.trim();
   if (!msg) return;
 
-  // Optimistic send
+  // Optimistically show message
   appendMessage(msg, 'user', 'Sending...');
   messageInput.value = '';
   messageInput.style.height = 'auto';
@@ -246,10 +259,20 @@ chatForm.addEventListener('submit', async (e) => {
     const res = await fetch('', { method: 'POST', body: formData });
     const data = await res.json();
     if (!data.success) throw new Error();
-    chatHistory.lastElementChild.querySelector('p:last-child').textContent = 'Just now';
+
+    // Update "Sending..." → "Just now"
+    const lastBubble = chatHistory.lastElementChild;
+    if (lastBubble) {
+      lastBubble.querySelector('p:last-child').textContent = 'Just now';
+    }
+
+    // Track the real message ID
+    lastSentMsgId = data.id;
+    lastMsgId = Math.max(lastMsgId, data.id);
+
   } catch (err) {
     alert('Failed to send. Please try again.');
-    chatHistory.lastElementChild.remove();
+    chatHistory.lastElementChild?.remove();
   }
 });
 
@@ -270,7 +293,13 @@ async function fetchMessages() {
       data.messages.forEach(msg => {
         if (msg.id > lastMsgId) {
           lastMsgId = msg.id;
-          appendMessage(msg.message, msg.sender_type, formatTime(msg.created_at));
+
+          // Skip if it's our own message we already showed
+          if (msg.sender_type === 'user' && msg.id === lastSentMsgId) {
+            return;
+          }
+
+          appendMessage(msg.message, msg.sender_type, formatTime(msg.created_at), msg.id);
         }
       });
     }

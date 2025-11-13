@@ -1219,4 +1219,3 @@ function saveFoodLog() {
     </script>
 </body>
 </html>
-

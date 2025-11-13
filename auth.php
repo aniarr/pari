@@ -18,6 +18,11 @@ $action = $_GET['action'] ?? 'login';
 $error = '';
 $success = '';
 
+// Show brief message after redirect from registration
+if ($action === 'login' && isset($_GET['registered']) && $_GET['registered'] === '1') {
+    $success = 'Registration successful. Please log in.';
+}
+
 // Handle form submit
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
@@ -36,8 +41,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $error = "All fields are required.";
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $error = "Invalid email format.";
-            } elseif (!preg_match('/^[0-9]{10}$/', $phone)) {
-                $error = "Phone number must be exactly 10 digits with no other characters.";
+            } elseif (!preg_match('/^[6-9][0-9]{9}$/', $phone)) {
+                $error = "Phone must be 10 digits and start with 6,7,8 or 9.";
             } elseif (!preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/', $password)) {
                 $error = "Password must be at least 8 characters and contain at least one uppercase letter, one number, and one special character.";
             } elseif ($password !== $confirm_password) {
@@ -51,19 +56,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if ($stmt->num_rows > 0) {
                     $error = "An account with this email already exists.";
                 } else {
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt_insert = $conn->prepare("INSERT INTO register (name, email, phone, password) VALUES (?, ?, ?, ?)");
-                    $stmt_insert->bind_param("ssss", $name, $email, $phone, $hashed_password);
-
-                    if ($stmt_insert->execute()) {
-                        $success = "Registration successful! <a href='auth.php?action=login'>Log in</a>.";
+                    // Ensure phone number is unique (one account per phone)
+                    $phoneCheck = $conn->prepare("SELECT id FROM register WHERE phone = ?");
+                    $phoneCheck->bind_param("s", $phone);
+                    $phoneCheck->execute();
+                    $phoneCheck->store_result();
+                    if ($phoneCheck->num_rows > 0) {
+                        $error = "An account with this phone number already exists.";
+                        $phoneCheck->close();
                     } else {
-                        $error = "Something went wrong. Please try again.";
+                        $phoneCheck->close();
+                         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                         $stmt_insert = $conn->prepare("INSERT INTO register (name, email, phone, password) VALUES (?, ?, ?, ?)");
+                         $stmt_insert->bind_param("ssss", $name, $email, $phone, $hashed_password);
+ 
+                         if ($stmt_insert->execute()) {
+                             $stmt_insert->close();
+                             // Redirect immediately to login page with a flag so the login form can show a message if desired
+                             header("Location: auth.php?action=login&registered=1");
+                             exit;
+                         } else {
+                             $error = "Something went wrong. Please try again.";
+                         }
                     }
-                    $stmt_insert->close();
-                }
-                $stmt->close();
-            }
+                 }
+                 $stmt->close();
+             }
         } elseif ($action === 'login') {
             // Login
             $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
@@ -145,7 +163,7 @@ $conn->close();
 
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-
+                
                 <?php if ($action === 'register'): ?>
                     <label for="name" class="block mb-1 text-sm text-white">Name</label>
                     <input type="text" name="name" placeholder="John Doe" required class="w-full p-2 mb-5 rounded-lg bg-gray-700 text-white border-none">
@@ -154,7 +172,8 @@ $conn->close();
                     <input type="email" name="email" placeholder="example@gmail.com" required class="w-full p-2 mb-5 rounded-lg bg-gray-700 text-white border-none">
 
                     <label for="phone" class="block mb-1 text-sm text-white">Phone</label>
-                    <input type="tel" name="phone" placeholder="1234567890" pattern="[0-9]{10}" maxlength="10" required class="w-full p-2 mb-5 rounded-lg bg-gray-700 text-white border-none">
+                    <!-- pattern enforces first digit 6-9 and total 10 digits; title explains rule to user -->
+                    <input type="tel" name="phone" placeholder="6XXXXXXXXX" pattern="[6-9][0-9]{9}" maxlength="10" title="Enter 10 digits, starting with 6,7,8 or 9" required class="w-full p-2 mb-5 rounded-lg bg-gray-700 text-white border-none">
 
                     <label for="password" class="block mb-1 text-sm text-white">Password</label>
                     <div class="relative w-full">

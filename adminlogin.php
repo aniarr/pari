@@ -58,10 +58,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } elseif ($form_type === "register") {
             $username = trim($_POST['username'] ?? '');
             $password = $_POST['password'] ?? '';
+            $confirm_password = $_POST['confirm_password'] ?? '';
             $secret_code = trim($_POST['secret_code'] ?? '');
 
             if (empty($username) || empty($password) || empty($secret_code)) {
                 $error = "All fields are required.";
+            } elseif ($password !== $confirm_password) {
+                $error = "Passwords do not match.";
+            } elseif (!preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/', $password)) {
+                $error = "Password must be at least 8 characters and include an uppercase letter, a number and a special character.";
             } elseif ($secret_code !== "RAWFITADMIN") {
                 $error = "Invalid secret code.";
             } else {
@@ -159,12 +164,36 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div>
       <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
       <div class="relative">
+        <!-- pattern: min 8, 1 uppercase, 1 digit, 1 special char -->
         <input type="password" name="password" id="registerPassword" placeholder="Create password" required
+               pattern="(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}"
+               title="At least 8 characters, include 1 uppercase letter, 1 number and 1 special character"
+               aria-describedby="pwdHelp"
                class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
         <button type="button" onclick="togglePassword('registerPassword')" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-orange-400">
           👁️
         </button>
       </div>
+      <div id="pwdHelp" class="mt-2 text-xs text-gray-400">
+        <ul id="pwdReqs" class="space-y-1">
+          <li id="reqLength" class="text-red-400">• At least 8 characters</li>
+          <li id="reqUpper" class="text-red-400">• At least one uppercase letter (A–Z)</li>
+          <li id="reqDigit" class="text-red-400">• At least one number (0–9)</li>
+          <li id="reqSpecial" class="text-red-400">• At least one special character (!@#$%^&*)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
+      <div class="relative">
+        <input type="password" name="confirm_password" id="confirmPassword" placeholder="Confirm password" required
+               class="w-full px-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 outline-none transition">
+        <button type="button" onclick="togglePassword('confirmPassword')" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-orange-400">
+          👁️
+        </button>
+      </div>
+      <div id="pwdMatch" class="mt-2 text-xs text-gray-400"></div>
     </div>
 
     <div>
@@ -214,6 +243,63 @@ function togglePassword(id) {
   const input = document.getElementById(id);
   input.type = input.type === "password" ? "text" : "password";
 }
+
+// Client-side confirm-password check for better UX
+document.addEventListener('DOMContentLoaded', function () {
+  const regForm = document.getElementById('registerForm');
+  if (!regForm) return;
+
+  const pwd = document.getElementById('registerPassword');
+  const cp = document.getElementById('confirmPassword');
+  const reqLength = document.getElementById('reqLength');
+  const reqUpper  = document.getElementById('reqUpper');
+  const reqDigit  = document.getElementById('reqDigit');
+  const reqSpecial= document.getElementById('reqSpecial');
+  const pwdMatch  = document.getElementById('pwdMatch');
+
+  function validatePasswordLive() {
+    const v = pwd.value || '';
+    // checks
+    const okLength = v.length >= 8;
+    const okUpper  = /[A-Z]/.test(v);
+    const okDigit  = /\d/.test(v);
+    const okSpecial= /[\W_]/.test(v);
+
+    reqLength.classList.toggle('text-green-400', okLength);
+    reqLength.classList.toggle('text-red-400', !okLength);
+    reqUpper.classList.toggle('text-green-400', okUpper);
+    reqUpper.classList.toggle('text-red-400', !okUpper);
+    reqDigit.classList.toggle('text-green-400', okDigit);
+    reqDigit.classList.toggle('text-red-400', !okDigit);
+    reqSpecial.classList.toggle('text-green-400', okSpecial);
+    reqSpecial.classList.toggle('text-red-400', !okSpecial);
+    return okLength && okUpper && okDigit && okSpecial;
+  }
+
+  function validateMatch() {
+    if (!cp) return false;
+    const match = pwd.value === cp.value && cp.value.length > 0;
+    pwdMatch.textContent = match ? 'Passwords match' : (cp.value ? 'Passwords do not match' : '');
+    pwdMatch.classList.toggle('text-green-400', match);
+    pwdMatch.classList.toggle('text-red-400', !match && cp.value.length > 0);
+    return match;
+  }
+
+  if (pwd) pwd.addEventListener('input', () => { validatePasswordLive(); validateMatch(); });
+  if (cp)  cp.addEventListener('input', validateMatch);
+
+  regForm.addEventListener('submit', function (e) {
+    // enforce client-side policy before submit
+    const okPolicy = validatePasswordLive();
+    const okMatch = validateMatch();
+    if (!okPolicy || !okMatch) {
+      e.preventDefault();
+      alert('Password does not meet requirements or passwords do not match. Please correct and try again.');
+      return false;
+    }
+    return true;
+  });
+});
 </script>
 </body>
 </html>

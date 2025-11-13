@@ -225,7 +225,7 @@ $conn->close();
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-2 gap-8">
                 <div>
-                    <h2 class="text-3xl font-bold text-white mb-4">Why Choose RawFit?</h2>
+                    <h2 class="text-3xl font-bold text-white mb-4">Outlook</h2>
                     <p class="text-gray-400 text-lg mb-6">
                        we're your fitness family. Our mission is to provide 
                         an inclusive, motivating digital environment where everyone can achieve their health and explore.
@@ -260,8 +260,17 @@ $conn->close();
                                     <line x1="12" y1="22.08" x2="12" y2="12"/>
                                 </svg>
                             </div>
-                            <h3 class="text-xl font-semibold text-white mb-2">Nutrition Guidance</h3>
-                            <p class="text-gray-400">Personalized meal plans and expert advice to fuel your fitness journey</p>
+                            <h3 class="text-xl font-semibold text-white mb-2">Workout Guidance</h3>
+                            <p class="text-gray-400">Customize your workout plans with  tailored routines.</p>
+                        </div>
+                         <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:bg-gray-800/70 transition-all">
+                            <div class="w-12 h-12 rounded-lg bg-gradient-to-r from-red-500 to-blue-600 flex items-center justify-center mb-4">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                                    <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Blitz</h3>
+                            <p class="text-gray-400">Watch fitness oriented blitz like videos.</p>
                         </div>
                     </div>
                 </div>
@@ -285,7 +294,6 @@ $conn->close();
                     <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:bg-gray-800/70 hover:scale-105 transition-all duration-300">
                         <img src="<?php echo $course['image_path'] ? 'uploads/' . htmlspecialchars($course['image_path']) : 'https://via.placeholder.com/400x300'; ?>" alt="<?php echo htmlspecialchars($course['title']); ?>" class="rounded-lg mb-4 object-cover w-full h-48" />
                         <h3 class="text-xl font-semibold text-white mb-2"><?php echo htmlspecialchars($course['title']); ?></h3>
-                        <p class="text-gray-400 mb-4"><?php echo htmlspecialchars($course['description']); ?></p>
                         <ul class="text-gray-400 text-sm mb-4 space-y-2">
                             <li class="flex items-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2"><path d="M5 13l4 4L19 7"/></svg>Category: <?php echo htmlspecialchars($course['category']); ?></li>
                             <li class="flex items-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2"><path d="M5 13l4 4L19 7"/></svg>Duration: <?php echo htmlspecialchars($course['duration']); ?> weeks</li>
@@ -320,7 +328,7 @@ $conn->close();
                         </div>
                         <div>
                             <h4 class="text-white font-semibold">Phone</h4>
-                            <p class="text-gray-400">(555) 123-4567</p>
+                            <p class="text-gray-400">8330839447</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -332,7 +340,7 @@ $conn->close();
                         </div>
                         <div>
                             <h4 class="text-white font-semibold">Email</h4>
-                            <p class="text-gray-400">info@fitcoregym.com</p>
+                            <p class="text-gray-400">rawfit@gmail.com</p>
                         </div>
                     </div>
                 </div>
@@ -347,17 +355,32 @@ $conn->close();
                     <div>
                         <input type="email" id="email" name="email" placeholder="Your Email" required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500">
                     </div>
-                    <div>
-                        <input type="tel" id="phone" name="phone" placeholder="Your Phone" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                   <div>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone" 
+                            placeholder="Your Phone" 
+                            class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            pattern="[0-9]{10}"
+                            maxlength="10"
+                            required
+                            title="Please enter a valid 10-digit phone number"
+                        >
                     </div>
+
                     <div>
                         <textarea id="message" name="message" placeholder="Your Message" rows="5" required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
                     </div>
+
+                    <!-- Inline validation error (populated by JS) -->
+                    <div id="contactError" class="text-sm text-red-400" role="status" aria-live="polite"></div>
+
                     <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all">Send Message</button>
                 </form>
             </div>
         </div>
-                                        <a href="adminlogin.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Admin Login</a>
+        <a href="adminlogin.php" class="block text-gray-300 hover:text-white hover:bg-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Admin Login</a>
 
     </div>
 </section>
@@ -404,6 +427,50 @@ $conn->close();
 
         // Update navigation on hash change
         window.addEventListener('hashchange', updateNavigation);
+
+        // Contact form client-side validation
+        (function () {
+            const form = document.querySelector('form[action="contact.php"]');
+            if (!form) return;
+            const emailEl = form.querySelector('#email');
+            const phoneEl = form.querySelector('#phone');
+            const errorEl = document.getElementById('contactError');
+
+            const emailRe = /^[A-Za-z0-9._%+-]+@gmail\.com$/i;
+            const phoneRe = /^[6-9][0-9]{9}$/;
+
+            function showError(msg, field) {
+                if (errorEl) errorEl.textContent = msg;
+                if (field && typeof field.focus === 'function') field.focus();
+            }
+
+            function clearError() {
+                if (errorEl) errorEl.textContent = '';
+            }
+
+            form.addEventListener('submit', function (e) {
+                clearError();
+                const email = (emailEl && emailEl.value || '').trim();
+                const phone = (phoneEl && phoneEl.value || '').replace(/\s+/g, '');
+
+                if (!emailRe.test(email)) {
+                    e.preventDefault();
+                    showError('Email must be a Gmail address and end with @gmail.com', emailEl);
+                    return false;
+                }
+                if (!phoneRe.test(phone)) {
+                    e.preventDefault();
+                    showError('Phone must start with 6/7/8/9 and be exactly 10 digits', phoneEl);
+                    return false;
+                }
+                // allow submit
+                return true;
+            });
+
+            // clear error as user types
+            if (emailEl) emailEl.addEventListener('input', clearError);
+            if (phoneEl) phoneEl.addEventListener('input', clearError);
+        })();
     </script>
 </body>
 </html>

@@ -1,54 +1,76 @@
 <?php
 session_start();
 
-// Database connection
+// ---------------------------------------------------------------------
+// 1. DATABASE CONNECTION
+// ---------------------------------------------------------------------
 $conn = new mysqli("localhost", "root", "", "rawfit");
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Use trainer_id from session
-$trainer_id = $_SESSION['trainer_id'];
+// ---------------------------------------------------------------------
+// 2. GET TRAINER ID FROM SESSION
+// ---------------------------------------------------------------------
+$trainer_id = $_SESSION['trainer_id'] ?? 0;
+if ($trainer_id == 0) {
+    header("Location: trainer_login.php");
+    exit();
+}
 
-// Fetch trainer details (add trainer_image)
-$sql = "SELECT name, email, phone, address, age, dob, blood_group, location, gender, intrests, website, trainer_image FROM trainer_details WHERE id = ?";
+// ---------------------------------------------------------------------
+// 3. FETCH ALL DATA FROM trainer_details (INCLUDING name!)
+// ---------------------------------------------------------------------
+$name = $email = $phone = $address = $age = $dob = $blood_group = $location = $gender = $intrests = $website = $trainer_image = '';
+
+$sql = "SELECT name, email, phone, address, age, dob, blood_group, location, gender, intrests, website, trainer_image 
+        FROM trainer_details WHERE id = ?";
+
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $trainer_id);
 $stmt->execute();
 $stmt->bind_result($name, $email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $intrests, $website, $trainer_image);
-$stmt->fetch();
+$has_row = $stmt->fetch();
 $stmt->close();
 
+// Set default name if no record exists
+if (!$has_row) {
+    $name = 'Trainer';
+}
+
 $userData = [
-    'name' => $name ?? 'Trainer',
-    'email' => $email ?? '',
-    'phone' => $phone ?? '',
-    'address' => $address ?? '',
-    'age' => $age ?? '',
-    'dob' => $dob ?? '',
-    'blood_group' => $blood_group ?? '',
-    'location' => $location ?? '',
-    'gender' => $gender ?? '',
-    'interests' => $intrests ?? '',
-    'website' => $website ?? '',
+    'name'          => $name,
+    'email'         => $email ?? '',
+    'phone'         => $phone ?? '',
+    'address'       => $address ?? '',
+    'age'           => $age ?? '',
+    'dob'           => $dob ?? '',
+    'blood_group'   => $blood_group ?? '',
+    'location'      => $location ?? '',
+    'gender'        => $gender ?? '',
+    'interests'     => $intrests ?? '',
+    'website'       => $website ?? '',
     'trainer_image' => $trainer_image ?? '',
 ];
 
-// Handle form submission
+// ---------------------------------------------------------------------
+// 4. FORM SUBMISSION – UPDATE trainer_details **AND** trainerlog
+// ---------------------------------------------------------------------
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST['name'] ?? $userData['name'];
-    $email = $_POST['email'] ?? $userData['email'];
-    $phone = $_POST['phone'] ?? $userData['phone'];
-    $address = $_POST['address'] ?? $userData['address'];
-    $age = $_POST['age'] ?? $userData['age'];
-    $dob = $_POST['dob'] ?? $userData['dob'];
-    $blood_group = $_POST['blood_group'] ?? $userData['blood_group'];
-    $location = $_POST['location'] ?? $userData['location'];
-    $gender = $_POST['gender'] ?? $userData['gender'];
-    $intrests = $_POST['interests'] ?? $userData['interests'];
-    $website = $_POST['website'] ?? $userData['website'];
 
-    // Handle image upload
+    $name        = $_POST['name']        ?? $userData['name'];
+    $email       = $_POST['email']       ?? $userData['email'];
+    $phone       = $_POST['phone']       ?? $userData['phone'];
+    $address     = $_POST['address']     ?? $userData['address'];
+    $age         = $_POST['age']         ?? $userData['age'];
+    $dob         = $_POST['dob']         ?? $userData['dob'];
+    $blood_group = $_POST['blood_group'] ?? $userData['blood_group'];
+    $location    = $_POST['location']    ?? $userData['location'];
+    $gender      = $_POST['gender']      ?? $userData['gender'];
+    $intrests    = $_POST['interests']   ?? $userData['interests'];
+    $website     = $_POST['website']     ?? $userData['website'];
+
+    // ----- IMAGE UPLOAD (unchanged) -----
     $trainer_image = $userData['trainer_image'];
     if (isset($_FILES['trainer_image']) && $_FILES['trainer_image']['error'] == UPLOAD_ERR_OK) {
         $imgTmp = $_FILES['trainer_image']['tmp_name'];
@@ -66,44 +88,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    $sql = "INSERT INTO trainer_details (id, name, email, phone, address, age, dob, blood_group, location, gender, intrests, website, trainer_image) 
+    // ----- START TRANSACTION -----
+    $conn->autocommit(FALSE);
+    $ok = true;
+
+    // 1. UPDATE trainer_details (INSERT … ON DUPLICATE KEY)
+    $sql_det = "INSERT INTO trainer_details 
+            (id, name, email, phone, address, age, dob, blood_group, location, gender, intrests, website, trainer_image) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
-            name = VALUES(name), 
-            email = VALUES(email), 
-            phone = VALUES(phone), 
-            address = VALUES(address), 
-            age = VALUES(age), 
-            dob = VALUES(dob), 
-            blood_group = VALUES(blood_group), 
-            location = VALUES(location), 
-            gender = VALUES(gender), 
-            intrests = VALUES(intrests), 
-            website = VALUES(website),
-            trainer_image = VALUES(trainer_image)";
+            name=VALUES(name), email=VALUES(email), phone=VALUES(phone), address=VALUES(address),
+            age=VALUES(age), dob=VALUES(dob), blood_group=VALUES(blood_group), location=VALUES(location),
+            gender=VALUES(gender), intrests=VALUES(intrests), website=VALUES(website), trainer_image=VALUES(trainer_image)";
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("issssisssssss", $trainer_id, $name, $email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $intrests, $website, $trainer_image);
+    $stmt_det = $conn->prepare($sql_det);
+    $stmt_det->bind_param(
+        "issssisssssss",
+        $trainer_id, $name, $email, $phone, $address, $age, $dob,
+        $blood_group, $location, $gender, $intrests, $website, $trainer_image
+    );
+    if (!$stmt_det->execute()) $ok = false;
+    $stmt_det->close();
 
-    if ($stmt->execute()) {
-        header("Location: trainer_profile.php?success=1");
+    // 2. UPDATE trainerlog – **NEW BLOCK**
+    $sql_log = "UPDATE trainerlog SET trainer_name = ? WHERE trainer_id = ?";
+    $stmt_log = $conn->prepare($sql_log);
+    $stmt_log->bind_param("si", $name, $trainer_id);
+    if (!$stmt_log->execute()) $ok = false;
+    $stmt_log->close();
+
+    // ----- COMMIT / ROLLBACK -----
+    if ($ok) {
+        $conn->commit();
+        header("Location: trainer_edit_profile.php?success=1");
         exit();
     } else {
+        $conn->rollback();
         $error = "Failed to update profile. Please try again.";
     }
-    $stmt->close();
-}
-
-// Fallback: If name is empty, fetch from trainerlog
-if (empty($name)) {
-    $sql = "SELECT trainer_id FROM trainerlog WHERE trainer_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $trainer_id);
-    $stmt->execute();
-    $stmt->bind_result($reg_name);
-    $stmt->fetch();
-    $stmt->close();
-    $userData['name'] = $reg_name ?? 'Trainer';
+    $conn->autocommit(TRUE);
 }
 
 $conn->close();
@@ -165,7 +188,6 @@ $conn->close();
                         </svg>
                         <span>Nutrition</span>
                     </a>
-                
                 </div>
 
                 <!-- User Info -->
@@ -239,96 +261,48 @@ $conn->close();
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Personal Information -->
                         <div>
-                            <label class="block text-gray-300 mb-2" for="name">Full Name(use the same name from registration)</label>
+                            <label class="block text-gray-300 mb-2" for="name">Full Name (use the same name from registration)</label>
                             <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($userData['name']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                           <label class="block text-gray-300 mt-4 mb-2" for="email">Email</label>
-                                <input 
-                                    type="email" 
-                                    name="email" 
-                                    id="email" 
-                                    value="<?php echo htmlspecialchars($userData['email'] ?? ''); ?>" 
-                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['email']) ? 'border-red-500' : 'border-transparent'; ?>" 
-                                    placeholder="you@example.com"
-                                    required
-                                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                                    title="Please enter a valid email address (e.g., user@domain.com)"
-                                    aria-describedby="email-error"
-                                >
+                            
+                            <label class="block text-gray-300 mt-4 mb-2" for="email">Email</label>
+                            <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($userData['email'] ?? ''); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['email']) ? 'border-red-500' : 'border-transparent'; ?>" placeholder="you@example.com" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" title="Please enter a valid email address (e.g., user@domain.com)" aria-describedby="email-error">
+                            <?php if (!empty($errors['email'])): ?>
+                                <p id="email-error" class="text-red-400 text-sm mt-1 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    <?php echo htmlspecialchars($errors['email']); ?>
+                                </p>
+                            <?php endif; ?>
 
-                                <?php if (!empty($errors['email'])): ?>
-                                    <p id="email-error" class="text-red-400 text-sm mt-1 flex items-center">
-                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        <?php echo htmlspecialchars($errors['email']); ?>
-                                    </p>
-                                <?php endif; ?>
                             <label class="block text-gray-300 mt-4 mb-2" for="phone">Phone</label>
-                                <input 
-                                    type="tel" 
-                                    name="phone" 
-                                    id="phone" 
-                                    value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>" 
-                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['phone']) ? 'border-red-500' : 'border-transparent'; ?>" 
-                                    placeholder="1234567890"
-                                    required
-                                    pattern="[0-9]{10}"
-                                    maxlength="10"
-                                    inputmode="numeric"
-                                    title="Please enter exactly 10 digits (e.g., 9876543210)"
-                                    aria-describedby="phone-error"
-                                >
+                            <input type="tel" name="phone" id="phone" value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['phone']) ? 'border-red-500' : 'border-transparent'; ?>" placeholder="1234567890" required pattern="[0-9]{10}" maxlength="10" inputmode="numeric" title="Please enter exactly 10 digits (e.g., 9876543210)" aria-describedby="phone-error">
+                            <?php if (!empty($errors['phone'])): ?>
+                                <p id="phone-error" class="text-red-400 text-sm mt-1 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    <?php echo htmlspecialchars($errors['phone']); ?>
+                                </p>
+                            <?php endif; ?>
 
-                                <?php if (!empty($errors['phone'])): ?>
-                                    <p id="phone-error" class="text-red-400 text-sm mt-1 flex items-center">
-                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        <?php echo htmlspecialchars($errors['phone']); ?>
-                                    </p>
-                                <?php endif; ?>
                             <label class="block text-gray-300 mt-4 mb-2" for="address">Address</label>
                             <input type="text" name="address" id="address" value="<?php echo htmlspecialchars($userData['address']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                            
                             <label class="block text-gray-300 mt-4 mb-2" for="age">Age</label>
-                                <input 
-                                    type="number" 
-                                    name="age" 
-                                    id="age" 
-                                    value="<?php echo htmlspecialchars($userData['age'] ?? ''); ?>" 
-                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['age']) ? 'border-red-500' : 'border-transparent'; ?>" 
-                                    placeholder="25"
-                                    required
-                                    min="18"
-                                    max="100"
-                                    step="1"
-                                    inputmode="numeric"
-                                    title="Age must be between 18 and 100 years."
-                                    aria-describedby="age-error"
-                                >
+                            <input type="number" name="age" id="age" value="<?php echo htmlspecialchars($userData['age'] ?? ''); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all border <?php echo !empty($errors['age']) ? 'border-red-500' : 'border-transparent'; ?>" placeholder="25" required min="18" max="100" step="1" inputmode="numeric" title="Age must be between 18 and 100 years." aria-describedby="age-error">
+                            <?php if (!empty($errors['age'])): ?>
+                                <p id="age-error" class="text-red-400 text-sm mt-1 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    <?php echo htmlspecialchars($errors['age']); ?>
+                                </p>
+                            <?php endif; ?>
 
-                                <?php if (!empty($errors['age'])): ?>
-                                    <p id="age-error" class="text-red-400 text-sm mt-1 flex items-center">
-                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        <?php echo htmlspecialchars($errors['age']); ?>
-                                    </p>
-                                <?php endif; ?>
                             <label class="block text-gray-300 mt-4 mb-2" for="dob">Date of Birth</label>
                             <input type="date" name="dob" id="dob" value="<?php echo htmlspecialchars($userData['dob']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                        <label class="block text-gray-300 mt-4 mb-2" for="blood_group">Blood Group</label>
 
-                            <select name="blood_group" id="blood_group"
-                                    class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                            <label class="block text-gray-300 mt-4 mb-2" for="blood_group">Blood Group</label>
+                            <select name="blood_group" id="blood_group" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
                                 <option value="">-- Select Blood Group --</option>
-
                                 <?php
-                                // List of valid blood groups
                                 $bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-
-                                // Current value from DB (make sure it is sanitized)
                                 $current = $userData['blood_group'] ?? '';
-
                                 foreach ($bloodGroups as $group) {
                                     $selected = ($current === $group) ? 'selected' : '';
                                     echo "<option value=\"" . htmlspecialchars($group) . "\" $selected>" . htmlspecialchars($group) . "</option>";
@@ -341,38 +315,26 @@ $conn->close();
                         <div>
                             <label class="block text-gray-300 mb-2" for="location">Location</label>
                             <input type="text" name="location" id="location" value="<?php echo htmlspecialchars($userData['location']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                           <label class="block text-gray-300 mt-4 mb-2" for="gender">Gender / Pronouns</label>
+                            
+                            <label class="block text-gray-300 mt-4 mb-2" for="gender">Gender / Pronouns</label>
+                            <select name="gender" id="gender" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all" required>
+                                <option value="">-- Select --</option>
+                                <?php
+                                $options = ['Male', 'Female'];
+                                $current = $userData['gender'] ?? '';
+                                foreach ($options as $opt) {
+                                    $selected = ($current === $opt) ? 'selected' : '';
+                                    echo "<option value=\"" . htmlspecialchars($opt) . "\" $selected>" . htmlspecialchars($opt) . "</option>";
+                                }
+                                ?>
+                            </select>
 
-                                <select name="gender" id="gender"
-                                        class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
-                                        required>
-                                    <option value="">-- Select --</option>
-
-                                    <?php
-                                    // -----------------------------------------------------------------
-                                    //  Options you want to offer.  Add/remove as needed.
-                                    // -----------------------------------------------------------------
-                                    $options = [
-                                        'Male',
-                                        'Female'
-                                       
-                                      
-                                    ];
-
-                                    $current = $userData['gender'] ?? '';
-
-                                    foreach ($options as $opt) {
-                                        $selected = ($current === $opt) ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($opt) . '" ' . $selected . '>'
-                                            . htmlspecialchars($opt) . '</option>';
-                                    }
-                                    ?>
-                                </select>
                             <label class="block text-gray-300 mt-4 mb-2" for="interests">Interests/Hobbies</label>
                             <input type="text" name="interests" id="interests" value="<?php echo htmlspecialchars($userData['interests']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                            
                             <label class="block text-gray-300 mt-4 mb-2" for="website">Website/Link</label>
                             <input type="url" name="website" id="website" value="<?php echo htmlspecialchars($userData['website']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                        
+                            
                             <label class="block text-gray-300 mt-4 mb-2" for="trainer_image">Profile Image</label>
                             <?php if (!empty($userData['trainer_image'])): ?>
                                 <img src="uploads/<?php echo htmlspecialchars($userData['trainer_image']); ?>" alt="Profile Image" class="h-20 mb-2 rounded-full">
@@ -395,42 +357,28 @@ $conn->close();
         </div>
     </main>
 
-  
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize profile page
             initializeProfile();
-
-            // Update navigation active states
             updateNavigation();
         });
 
         function initializeProfile() {
-            // Load user data
-            const userData = {
-                name: '<?php echo htmlspecialchars($userData['name']); ?>'
-            };
-
-            // Update user name in header
             const userNameElement = document.getElementById('userName');
             if (userNameElement) {
-                userNameElement.textContent = userData.name;
+                userNameElement.textContent = <?php echo json_encode($userData['name']); ?>;
             }
         }
 
         function updateNavigation() {
-            const currentPage = window.location.pathname.split('/').pop();
             const navLinks = document.querySelectorAll('.nav-link');
             const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
 
-            // Remove active class from all links
             [...navLinks, ...mobileNavLinks].forEach(link => {
                 link.classList.remove('active', 'bg-orange-500', 'text-white', 'text-orange-500');
                 link.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
             });
 
-            // Add active class to profile page link in dropdown
             const profileDropdownLink = document.querySelector('a[href="trainer_profile.php"]');
             if (profileDropdownLink) {
                 profileDropdownLink.classList.add('bg-orange-500', 'text-white');
@@ -438,17 +386,13 @@ $conn->close();
             }
         }
 
-        // Profile button functionality
         const profileButton = document.getElementById('profileButton');
         const profileDropdown = document.getElementById('profileDropdown');
-
         if (profileButton && profileDropdown) {
             profileButton.addEventListener('click', function(e) {
                 e.preventDefault();
                 profileDropdown.classList.toggle('hidden');
             });
-
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(e) {
                 if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
                     profileDropdown.classList.add('hidden');

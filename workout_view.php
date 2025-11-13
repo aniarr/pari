@@ -76,6 +76,10 @@ if ($row = $result->fetch_assoc()) {
     $userName = $row['name'];
 }
 
+// Ensure $users_name is defined for the "Welcome back" line.
+// Prefer DB name, then session username, then a default.
+$users_name = $userName ?? ($_SESSION['username'] ?? 'User');
+
 $stmt->close();
 $conn->close();
 ?>
@@ -260,7 +264,7 @@ function updateNavigation() {
   <header class="flex flex-col sm:flex-row justify-between items-center mb-16">
     <div class="text-center sm:text-left">
       <h1 class="text-5xl md:text-6xl font-bold gradient-text mb-2">RawFit</h1>
-      <p class="text-xl text-gray-300">Welcome back, <span class="text-orange-400 font-semibold"><?= htmlspecialchars($username) ?></span>!</p>
+      <p class="text-xl text-gray-300">Welcome back, <span class="text-orange-400 font-semibold"><?= htmlspecialchars($users_name) ?></span>!</p>
     </div>
     <div class="mt-6 sm:mt-0 flex items-center gap-4">
       <div class="bg-gray-800/50 glass px-5 py-3 rounded-xl border border-gray-700">
@@ -306,7 +310,7 @@ function updateNavigation() {
           </div>
           <h2 class="text-3xl font-bold mb-3">Create New Split</h2>
           <p class="text-gray-300 mb-6 leading-relaxed">
-            Build a new workout split from scratch. Drag & drop 800+ exercises, customize sets/reps, and save.
+            Build a new workout split. Drag & drop 800+ exercises, customize sets/reps, and save.
           </p>
           <div class="flex items-center gap-3 text-emerald-400 font-semibold group-hover:text-emerald-300 transition">
             <span>Start Building</span>
@@ -315,16 +319,5 @@ function updateNavigation() {
         </div>
       </div>
     </a>
-
-  </div>
-
- 
-
-  <!-- Footer -->
-  <footer class="mt-20 text-center text-gray-500 text-sm">
-    <p>© 2025 RawFit • Built with <i class="fas fa-heart text-red-500"></i> for lifters</p>
-  </footer>
-</div>
-
 </body>
 </html>

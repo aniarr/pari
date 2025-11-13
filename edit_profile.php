@@ -1,85 +1,138 @@
-    <?php
-    session_start();
+<?php
+session_start();
 
-    // Redirect if not logged in
-    if (!isset($_SESSION['user_id'])) {
-        header("Location: home.php");
-        exit();
-    }
+// Redirect if not logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: home.php");
+    exit();
+}
 
-    // Database connection
-    $conn = new mysqli("localhost", "root", "", "rawfit");
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
+// Database connection
+$conn = new mysqli("localhost", "root", "", "rawfit");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
-    // Fetch user details
-        $user_id = $_SESSION['user_id'];
-        $sql = "SELECT name, email, phone, address, age, dob, blood_group, location, gender, interests, website FROM users_details WHERE id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $stmt->bind_result($name, $email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $interests, $website);
-        $stmt->fetch();
-        $stmt->close();
+// Fetch user details – name from register table, rest from users_details
+$user_id = $_SESSION['user_id'];
 
-        $userData = [
-            'name' => $name ?? 'User',
-            'email' => $email ?? '',
-            'phone' => $phone ?? '',
-            'address' => $address ?? '',
-            'age' => $age ?? '',
-            'dob' => $dob ?? '',
-            'blood_group' => $blood_group ?? '',
-            'location' => $location ?? '',
-            'gender' => $gender ?? '',
-            'interests' => $interests ?? '',
-            'website' => $website ?? '',
-        ];
+// Get name from register table
+$sql_register = "SELECT name FROM register WHERE id = ?";
+$stmt_reg = $conn->prepare($sql_register);
+$stmt_reg->bind_param("i", $user_id);
+$stmt_reg->execute();
+$stmt_reg->bind_result($register_name);
+$stmt_reg->fetch();
+$stmt_reg->close();
 
+// Get the rest from users_details
+$sql_details = "SELECT email, phone, address, age, dob, blood_group, location, gender, interests, website FROM users_details WHERE id = ?";
+$stmt_det = $conn->prepare($sql_details);
+$stmt_det->bind_param("i", $user_id);
+$stmt_det->execute();
+$stmt_det->bind_result($email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $interests, $website);
+$stmt_det->fetch();
+$stmt_det->close();
 
-    // Handle form submission
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $name = $_POST['name'] ?? $userData['name'];
-        $email = $_POST['email'] ?? $userData['email'];
-        $phone = $_POST['phone'] ?? $userData['phone'];
-        $address = $_POST['address'] ?? $userData['address'];
-        $age = $_POST['age'] ?? $userData['age'];
-        $dob = $_POST['dob'] ?? $userData['dob'];
-        $blood_group = $_POST['blood_group'] ?? $userData['blood_group'];
-        $location = $_POST['location'] ?? $userData['location'];
-        $gender = $_POST['gender'] ?? $userData['gender'];
-        $interests = $_POST['interests'] ?? $userData['interests'];
-        $website = $_POST['website'] ?? $userData['website'];
+// Use name from register table; fall back to 'User' if missing
+$name = $register_name ?? 'User';
 
-        $sql = "INSERT INTO users_details (id, name, email, phone, address, age, dob, blood_group, location, gender, interests, website) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                name = VALUES(name), 
-                email = VALUES(email), 
-                phone = VALUES(phone), 
-                address = VALUES(address), 
-                age = VALUES(age), 
-                dob = VALUES(dob), 
-                blood_group = VALUES(blood_group), 
-                location = VALUES(location), 
-                gender = VALUES(gender), 
-                interests = VALUES(interests), 
+$userData = [
+    'name' => $name,
+    'email' => $email ?? '',
+    'phone' => $phone ?? '',
+    'address' => $address ?? '',
+    'age' => $age ?? '',
+    'dob' => $dob ?? '',
+    'blood_group' => $blood_group ?? '',
+    'location' => $location ?? '',
+    'gender' => $gender ?? '',
+    'interests' => $interests ?? '',
+    'website' => $website ?? '',
+];
+
+// Handle form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = $_POST['name'] ?? $userData['name']; // allow editing name
+    $email = $_POST['email'] ?? $userData['email'];
+    $phone = $_POST['phone'] ?? $userData['phone'];
+    $address = $_POST['address'] ?? $userData['address'];
+    $age = $_POST['age'] ?? $userData['age'];
+    $dob = $_POST['dob'] ?? $userData['dob'];
+    $blood_group = $_POST['blood_group'] ?? $userData['blood_group'];
+    $location = $_POST['location'] ?? $userData['location'];
+    $gender = $_POST['gender'] ?? $userData['gender'];
+    $interests = $_POST['interests'] ?? $userData['interests'];
+    $website = $_POST['website'] ?? $userData['website'];
+
+    // Normalize nullable / typed values
+    $age_val = ($age === '' || $age === null) ? null : (int)$age;
+    $dob_val = ($dob === '' || $dob === null) ? null : $dob;
+
+    // Full INSERT ... ON DUPLICATE KEY UPDATE SQL (no ellipsis)
+    $sql = "INSERT INTO users_details 
+            (id, name, email, phone, address, age, dob, blood_group, location, gender, interests, website)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                email = VALUES(email),
+                phone = VALUES(phone),
+                address = VALUES(address),
+                age = VALUES(age),
+                dob = VALUES(dob),
+                blood_group = VALUES(blood_group),
+                location = VALUES(location),
+                gender = VALUES(gender),
+                interests = VALUES(interests),
                 website = VALUES(website)";
-        
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("issssissssss", $user_id, $name, $email, $phone, $address, $age, $dob, $blood_group, $location, $gender, $interests, $website);
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        $error = "Failed to prepare statement: " . $conn->error;
+    } else {
+        $stmt->bind_param(
+            "issssissssss",
+            $user_id,
+            $name,
+            $email,
+            $phone,
+            $address,
+            $age_val,
+            $dob_val,
+            $blood_group,
+            $location,
+            $gender,
+            $interests,
+            $website
+        );
 
         if ($stmt->execute()) {
-            header("Location: profile.php?success=1");
-            exit();
+            // also update the name in the register table so both tables stay in sync
+            $u = $conn->prepare("UPDATE register SET name = ? WHERE id = ?");
+            if ($u) {
+                $u->bind_param("si", $name, $user_id);
+                if (!$u->execute()) {
+                    // if register update fails, set an error but don't lose the users_details change
+                    $error = "Updated profile, but failed to update registered name: " . $u->error;
+                }
+                $u->close();
+            } else {
+                $error = "Updated profile, but failed to prepare name update: " . $conn->error;
+            }
+
+            // redirect only if there is no error from register update
+            if (empty($error)) {
+                header("Location: profile.php?success=1");
+                exit();
+            }
         } else {
-            $error = "Failed to update profile. Please try again.";
+            $error = "Failed to update profile. Please try again. (" . $stmt->error . ")";
         }
         $stmt->close();
     }
-    $conn->close();
-    ?>
+}
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -204,6 +257,7 @@
                     </svg>
                     <span class="text-xs">Trainers</span>
                 </a>
+                
                     <a href="workout_view.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
@@ -240,8 +294,10 @@
                         <!-- Personal Information -->
                         <div>
                             <label class="block text-gray-300 mb-2" for="name">Full Name</label>
-                            <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($userData['name']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
-                            <label class="block text-gray-300 mt-4 mb-2" for="email">Email</label>
+                            <!-- Show name from register only (readonly) -->
+                            <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($register_name ?? $userData['name']); ?>" 
+                                   class="w-full bg-gray-700  text-white rounded-lg p-3 focus:outline-none transition-all">
+                            <label class="block text-gray-300 mt-4 mb-2" for="email">Email (Use same as registration)</label>
                             <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($userData['email']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
                             <label class="block text-gray-300 mt-4 mb-2" for="phone">Phone</label>
                             <input type="tel" name="phone" id="phone" value="<?php echo htmlspecialchars($userData['phone']); ?>" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
@@ -281,9 +337,6 @@
             </div>
         </div>
     </main>
-
-    <!-- Footer -->
-  
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

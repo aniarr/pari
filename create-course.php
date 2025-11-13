@@ -223,6 +223,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
             <h1 class="text-2xl font-bold text-white mb-6">Create New Course</h1>
+               <p class="text-xs text-gray-500 mt-8 text-left">“While entering the code, make sure you have submitted your Trainer Certificate. Otherwise, your request will be rejected by the admin.”</p>
+       
+            <br><br>
 
             <?php if ($message): ?>
                 <div class="mb-6 p-4 rounded-lg 

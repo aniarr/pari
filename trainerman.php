@@ -421,7 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
                 
             <!-- Quick Stats -->
-            <div class="h-[205px] bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+            <div class="h-[120px] bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
                 <h3 class="text-lg font-semibold text-white mb-4">Quick Stats</h3>
                 <div class="space-y-4">
                     <div class="flex justify-between items-center">
@@ -430,12 +430,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <?php echo $quickStats['total_courses']; ?>
                         </span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-400">Active Students</span>
-                        <span class="font-semibold text-green-500">
-                            <?php echo $quickStats['active_students']; ?>
-                        </span>
-                    </div>
+                
                    
                 </div>
             </div>

@@ -8,6 +8,9 @@ if (!isset($_SESSION['owner_id'])) {
 $conn = new mysqli('localhost', 'root', '', 'rawfit');
 if ($conn->connect_error) die('DB connect error: ' . $conn->connect_error);
 
+// === ENSURE is_read COLUMN ===
+$conn->query("ALTER TABLE gym_messages ADD COLUMN IF NOT EXISTS is_read TINYINT(1) DEFAULT 0");
+
 // === HANDLE REPLY ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_reply') {
     $gym_id = (int)$_POST['gym_id'];
@@ -15,20 +18,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_
     $message = trim($_POST['message'] ?? '');
 
     if ($gym_id && $user_id && $message) {
-        $sender = 'owner';
-        $stmt = $conn->prepare('INSERT INTO gym_messages (gym_id, user_id, sender_type, message) VALUES (?, ?, ?, ?)');
-        $stmt->bind_param('iiss', $gym_id, $user_id, $sender, $message);
+        $stmt = $conn->prepare('INSERT INTO gym_messages (gym_id, user_id, sender_type, message, is_read) VALUES (?, ?, "owner", ?, 0)');
+        $stmt->bind_param('iis', $gym_id, $user_id, $message);
         $stmt->execute();
         $stmt->close();
 
-        // MARK ALL USER MESSAGES IN THIS CHAT AS READ
+        // Mark all user messages as read
         $mark = $conn->prepare("UPDATE gym_messages SET is_read = 1 WHERE gym_id = ? AND user_id = ? AND sender_type = 'user'");
         $mark->bind_param('ii', $gym_id, $user_id);
         $mark->execute();
         $mark->close();
     }
-    // Redirect with selected user
     header("Location: owner_messages.php?gym_id=$gym_id&user_id=$user_id");
+    exit;
+}
+
+// === AJAX: GET MESSAGES (for live update) ===
+if (isset($_GET['fetch_chat'])) {
+    header('Content-Type: application/json');
+    $gym_id = (int)$_GET['gym_id'];
+    $user_id = (int)$_GET['user_id'];
+    $since = (int)$_GET['since'];
+
+    $sql = "SELECT id, sender_type, message, created_at FROM gym_messages WHERE gym_id = ? AND user_id = ?";
+    $params = 'ii';
+    $types = [&$gym_id, &$user_id];
+    if ($since > 0) {
+        $sql .= " AND id > ?";
+        $params .= 'i';
+        $types[] = &$since;
+    }
+    $sql .= " ORDER BY created_at ASC";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($params, ...$types);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $messages = [];
+    while ($row = $res->fetch_assoc()) $messages[] = $row;
+    $stmt->close();
+
+    echo json_encode(['messages' => $messages]);
     exit;
 }
 
@@ -45,7 +75,7 @@ $ownerGyms = [];
 while ($g = $gymsRes->fetch_assoc()) $ownerGyms[] = $g;
 $gymsStmt->close();
 
-// === LOAD CONVERSATIONS (for sidebar) ===
+// === LOAD CONVERSATIONS ===
 $conversations = [];
 foreach ($ownerGyms as $gym) {
     $msgStmt = $conn->prepare('
@@ -53,28 +83,24 @@ foreach ($ownerGyms as $gym) {
         FROM gym_messages m
         LEFT JOIN register u ON m.user_id = u.id
         WHERE m.gym_id = ?
-        ORDER BY m.created_at DESC
+        GROUP BY m.user_id
+        HAVING MAX(m.created_at)
+        ORDER BY MAX(m.created_at) DESC
     ');
     $msgStmt->bind_param('i', $gym['gym_id']);
     $msgStmt->execute();
     $res = $msgStmt->get_result();
 
     $users = [];
-    $seen = [];
     while ($m = $res->fetch_assoc()) {
         $uid = $m['user_id'];
-        if (isset($seen[$uid])) continue;
-        $seen[$uid] = true;
-
         $unread = 0;
-        if ($m['sender_type'] === 'user' && $m['is_read'] == 0) {
-            $unreadStmt = $conn->prepare("SELECT COUNT(*) FROM gym_messages WHERE gym_id = ? AND user_id = ? AND sender_type = 'user' AND is_read = 0");
-            $unreadStmt->bind_param('ii', $gym['gym_id'], $uid);
-            $unreadStmt->execute();
-            $unreadStmt->bind_result($unread);
-            $unreadStmt->fetch();
-            $unreadStmt->close();
-        }
+        $unreadStmt = $conn->prepare("SELECT COUNT(*) FROM gym_messages WHERE gym_id = ? AND user_id = ? AND sender_type = 'user' AND is_read = 0");
+        $unreadStmt->bind_param('ii', $gym['gym_id'], $uid);
+        $unreadStmt->execute();
+        $unreadStmt->bind_result($unread);
+        $unreadStmt->fetch();
+        $unreadStmt->close();
 
         $users[] = [
             'user_id' => $uid,
@@ -91,6 +117,7 @@ foreach ($ownerGyms as $gym) {
 
 // === LOAD ACTIVE CHAT MESSAGES ===
 $active_chat = null;
+$last_msg_id = 0;
 if ($active_gym_id && $active_user_id) {
     $msgStmt = $conn->prepare('
         SELECT m.*, u.name AS user_name 
@@ -103,7 +130,10 @@ if ($active_gym_id && $active_user_id) {
     $msgStmt->execute();
     $res = $msgStmt->get_result();
     $msgs = [];
-    while ($m = $res->fetch_assoc()) $msgs[] = $m;
+    while ($m = $res->fetch_assoc()) {
+        $msgs[] = $m;
+        $last_msg_id = max($last_msg_id, $m['id']);
+    }
     if ($msgs) {
         $active_chat = [
             'gym_name' => $conversations[$active_gym_id]['gym'] ?? 'Unknown Gym',
@@ -131,6 +161,10 @@ if ($active_gym_id && $active_user_id) {
         .user-bubble { @apply bg-gray-700 text-gray-200; }
         .owner-bubble { @apply bg-orange-600 text-white; }
         .sidebar-user:hover { @apply bg-gray-800/70; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-black via-gray-900 to-black text-gray-100 min-h-screen">
@@ -155,8 +189,8 @@ if ($active_gym_id && $active_user_id) {
 
 <main class="pt-20 pb-12 px-4 max-w-7xl mx-auto flex gap-6 h-screen">
 
-    <!-- LEFT SIDEBAR: USERS -->
-    <div class="w-full md:w-80 glass rounded-2xl p-4 h-full overflow-y-auto">
+    <!-- LEFT SIDEBAR -->
+    <div class="w-full md:w-80 glass rounded-2xl p-4 h-full overflow-y-auto scrollbar-hide">
         <h2 class="text-xl font-bold text-orange-400 mb-4">Enquiries</h2>
 
         <?php if (empty($conversations)): ?>
@@ -199,7 +233,7 @@ if ($active_gym_id && $active_user_id) {
         <?php endif; ?>
     </div>
 
-    <!-- RIGHT PANEL: CHAT -->
+    <!-- RIGHT CHAT PANEL -->
     <div class="flex-1 glass rounded-2xl p-6 flex flex-col h-full <?= $active_chat ? '' : 'items-center justify-center' ?>">
         <?php if (!$active_chat): ?>
             <div class="text-center text-gray-400">
@@ -207,7 +241,7 @@ if ($active_gym_id && $active_user_id) {
                 <p class="text-lg">Select a user to start chatting</p>
             </div>
         <?php else: ?>
-            <!-- Chat Header -->
+            <!-- Header -->
             <div class="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-700">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
                     <?= strtoupper(substr($active_chat['user_name'], 0, 1)) ?>
@@ -219,13 +253,13 @@ if ($active_gym_id && $active_user_id) {
             </div>
 
             <!-- Messages -->
-            <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4">
+            <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-hide">
                 <?php foreach ($active_chat['messages'] as $m): 
                     $isOwner = $m['sender_type'] === 'owner';
                     $bubble = $isOwner ? 'owner-bubble ml-auto' : 'user-bubble mr-auto';
                     $time = date('M j, g:i a', strtotime($m['created_at']));
                 ?>
-                    <div class="flex <?= $isOwner ? 'justify-end' : 'justify-start' ?>">
+                    <div class="flex <?= $isOwner ? 'justify-end' : 'justify-start' ?> animate-fadeIn">
                         <div class="<?= $bubble ?> chat-bubble">
                             <p><?= nl2br(htmlspecialchars($m['message'])) ?></p>
                             <p class="text-xs opacity-75 mt-1"><?= $time ?></p>
@@ -251,11 +285,44 @@ if ($active_gym_id && $active_user_id) {
 </main>
 
 <script>
-    // Auto-scroll to bottom
-    const chat = document.getElementById('chatMessages');
-    if (chat) {
-        chat.scrollTop = chat.scrollHeight;
-    }
+const chatMessages = document.getElementById('chatMessages');
+let lastMsgId = <?= $last_msg_id ?>;
+
+// Auto-scroll
+function scrollToBottom() {
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+scrollToBottom();
+
+// Live update
+async function fetchNewMessages() {
+    if (!<?= $active_gym_id ?> || !<?= $active_user_id ?>) return;
+    try {
+        const res = await fetch(`?fetch_chat=1&gym_id=<?= $active_gym_id ?>&user_id=<?= $active_user_id ?>&since=${lastMsgId}`);
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+                if (msg.id > lastMsgId) {
+                    lastMsgId = msg.id;
+                    const isOwner = msg.sender_type === 'owner';
+                    const div = document.createElement('div');
+                    div.className = `flex ${isOwner ? 'justify-end' : 'justify-start'} animate-fadeIn`;
+                    div.innerHTML = `
+                        <div class="${isOwner ? 'owner-bubble' : 'user-bubble'} chat-bubble ml-auto">
+                            <p>${msg.message.replace(/\n/g, '<br>')}</p>
+                            <p class="text-xs opacity-75 mt-1">${new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                        </div>
+                    `;
+                    chatMessages.appendChild(div);
+                }
+            });
+            scrollToBottom();
+        }
+    } catch (err) { console.error(err); }
+}
+
+// Poll every 2.5 seconds
+setInterval(fetchNewMessages, 2500);
 </script>
 
 </body>

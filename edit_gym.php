@@ -184,7 +184,7 @@ $images = $img_stmt->get_result();
             <span class="text-xl font-bold">RawFit</span>
         </div>
         <div class="hidden md:flex items-center space-x-6">
-            <a href="owner_dashboard.php" class="text-gray-300 hover:text-white">Dashboard</a>
+            <a href="owner_dashboard.php" class="text-gray-300 hover:text-white">Home</a>
             <a href="Manage_Gyms.php" class="text-gray-300 hover:text-white">Add Gym</a>
         </div>
         <div class="flex items-center space-x-4">

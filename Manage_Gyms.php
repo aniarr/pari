@@ -42,8 +42,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!preg_match('/^\d{6}$/', $gym_zip)) {
         $errors[] = "PIN code must be exactly 6 digits.";
     }
-    if (!preg_match('/^\d{10}$/', $phone) || !preg_match('/^\d{10}$/', $gym_phone)) {
-        $errors[] = "Phone numbers must be 10 digits.";
+
+    // Updated Phone Validation: 10 digits, starts with 6-9
+    $phonePattern = '/^[6-9]\d{9}$/';
+    if (!preg_match($phonePattern, $phone)) {
+        $errors[] = "Owner phone must be 10 digits and start with 6, 7, 8, or 9.";
+    }
+    if (!preg_match($phonePattern, $gym_phone)) {
+        $errors[] = "Gym contact must be 10 digits and start with 6, 7, 8, or 9.";
     }
 
     if (empty($errors)) {
@@ -56,9 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $location = "$area, $city, $gym_state";
 
+        // Fixed typo: $gymHAS_state → $gym_state
         $stmt->bind_param("isssssssssssiiii",
             $owner_id, $gym_name, $location, $phone, $timings, $facilities, $gym_address,
-            $gymHAS_state, $gym_zip, $gym_phone, $gym_email, $gym_description, $capacity, $num_trainers,
+            $gym_state, $gym_zip, $gym_phone, $gym_email, $gym_description, $capacity, $num_trainers,
             $experience_years, $registrations);
 
         if ($stmt->execute()) {
@@ -206,7 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <i class="fas fa-home"></i> Home
         </a>
         <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
-        <a href="gym_profile.php" class="text-gray-300 hover:text-white font-medium transition flex items-center gap-2">
           <i class="fas fa-dumbbell"></i> View Gyms
         </a>
       </div>
@@ -230,6 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="w-full max-w-5xl bg-white/5 backdrop-blur-xl rounded-3xl p-8 md:p-12 shadow-2xl border border-white/10 hover:border-orange-500/30 transition-all duration-500">
 
     <?= $message ?>
+    
 
     <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6" id="gymForm">
       <!-- Left Column -->
@@ -254,14 +261,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">State *</label>
         </div>
-        
 
         <!-- City Dropdown -->
         <div class="relative custom-select-wrapper">
           <select name="city" id="city" required class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
             <option value="" disabled selected></option>
           </select>
-          <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none">City *</label>
+          <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none">City * (add the state first)</label>
         </div>
 
         <!-- Area -->
@@ -306,17 +312,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <!-- Right Column -->
       <div class="space-y-6">
+        <!-- Owner Phone -->
         <div class="relative">
-          <input type="text" name="phone" required placeholder=" " pattern="\d{10}" maxlength="10" inputmode="numeric" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+          <input type="text" name="phone" required placeholder=" " 
+                 pattern="[6-9][0-9]{9}" maxlength="10" inputmode="numeric"
+                 title="Must be 10 digits starting with 6, 7, 8, or 9"
+                 class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
-            Owner Phone
+            Owner Phone (starts with 6-9)
           </label>
         </div>
 
+        <!-- Gym Contact -->
         <div class="relative">
-          <input type="text" name="gym_phone" required placeholder=" " pattern="\d{10}" maxlength="10" inputmode="numeric" class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
+          <input type="text" name="gym_phone" required placeholder=" " 
+                 pattern="[6-9][0-9]{9}" maxlength="10" inputmode="numeric"
+                 title="Must be 10 digits starting with 6, 7, 8, or 9"
+                 class="peer w-full px-4 pt-6 pb-3 bg-gray-800/60 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition">
           <label class="absolute left-4 top-3 text-gray-400 text-sm pointer-events-none transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-3 peer-focus:text-xs peer-focus:text-orange-400">
-            Gym Contact
+            Gym Contact (starts with 6-9)
           </label>
         </div>
 
@@ -365,6 +379,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  onchange="previewImages(this)">
           <i class="fas fa-cloud-upload-alt text-4xl text-orange-400 mb-3"></i>
           <p class="text-gray-300 font-medium">Click to upload gym images (multiple)</p>
+                  <p class="text-xs text-gray-500 mt-8 text-center">Disclaimer: “While adding a new gym, please ensure that you have submitted your Gym Approval Certificate. Otherwise, your request will be rejected by the Administary.”
+
         </div>
         <div id="preview" class="flex flex-wrap gap-3 mt-4"></div>
       </div>

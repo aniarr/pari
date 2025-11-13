@@ -250,7 +250,7 @@ $trainers = $stmt->get_result();
                 <span class="text-white font-bold text-xl">RawFit</span>
             </div>
 
-            <div class="hidden md:flex align-center items-center space-x-8">
+            <div class="hidden md:flex align-center items-center left-0 space-x-8">
                 <a href="admin.php" class="align-center nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -388,6 +388,7 @@ $trainers = $stmt->get_result();
                         <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Name</th>
                         <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Email</th>
                         <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Phone</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Certificate</th>
                         <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Age</th>
                         <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Courses</th>
                         <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Actions</th>
@@ -408,6 +409,17 @@ $trainers = $stmt->get_result();
                         $courses = [];
                         while ($c = $courses_result->fetch_assoc()) $courses[] = $c;
                         $courses_stmt->close();
+
+                        // fetch certificate filename from trainerlog (if any)
+                        $cert_file = '';
+                        $cf = $conn->prepare("SELECT certificate_file FROM trainerlog WHERE trainer_id = ?");
+                        if ($cf) {
+                            $cf->bind_param("i", $trainer['trainer_id']);
+                            $cf->execute();
+                            $cf->bind_result($cert_file);
+                            $cf->fetch();
+                            $cf->close();
+                        }
                     ?>
                         <tr class="hover:bg-gray-800/50 transition-all duration-200 cursor-pointer group"
                             onclick='openTrainerModal(<?= json_encode($trainer); ?>, <?= json_encode($courses); ?>)'>
@@ -417,6 +429,19 @@ $trainers = $stmt->get_result();
                                 <a href="mailto:<?= htmlspecialchars($trainer['email']); ?>"><?= htmlspecialchars($trainer['email']); ?></a>
                             </td>
                             <td class="px-6 py-4 text-sm"><?= htmlspecialchars($trainer['phone'] ?? '—'); ?></td>
+
+                            <td class="px-6 py-4 text-sm">
+                                <?php if (!empty($cert_file) && file_exists(__DIR__ . '/uploads/certificates/' . $cert_file)): ?>
+                                    <a href="uploads/certificates/<?= htmlspecialchars($cert_file) ?>" target="_blank" class="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold bg-gray-700 hover:bg-gray-600 rounded">
+                                        <i class="fas fa-file"></i> View
+                                    </a>
+                                <?php elseif (!empty($cert_file)): ?>
+                                    <span class="text-xs text-gray-300">Stored: <?= htmlspecialchars($cert_file) ?></span>
+                                <?php else: ?>
+                                    <span class="text-xs text-gray-500">—</span>
+                                <?php endif; ?>
+                            </td>
+
                             <td class="px-6 py-4 text-sm"><?= htmlspecialchars($trainer['age'] ?? '—'); ?></td>
                             <td class="px-6 py-4 text-center">
                                 <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-bold rounded-full">
@@ -442,7 +467,7 @@ $trainers = $stmt->get_result();
                     <?php endwhile; ?>
                     <?php if ($trainers->num_rows === 0): ?>
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">
                                 <i class="fas fa-user-slash text-4xl mb-3 block"></i>
                                 <p class="text-lg">No trainers found.</p>
                             </td>
