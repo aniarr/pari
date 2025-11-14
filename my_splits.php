@@ -50,7 +50,7 @@ $stmt->execute([$userId]);
 $userRow = $stmt->fetch();
 $userName = $userRow['name'] ?? 'User';
 
-// Get user's own splits
+// Get user's splits (original + copies)
 $stmt = $pdo->prepare("
     SELECT 
         ws.id,
@@ -62,8 +62,7 @@ $stmt = $pdo->prepare("
         CASE WHEN ws.user_id = ? THEN 1 ELSE 0 END AS is_original_owner
     FROM workout_splits ws
     LEFT JOIN user_workouts uw 
-           ON uw.split_id = ws.id 
-          AND uw.user_id = ?
+           ON uw.split_id = ws.id AND uw.user_id = ?
     WHERE ws.user_id = ? OR uw.user_id = ?
     ORDER BY ws.created_at DESC
 ");
@@ -100,8 +99,6 @@ $splits = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <div class="relative z-10 max-w-6xl mx-auto">
-
-
 
 <!-- Navigation -->
 <nav class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
@@ -152,13 +149,13 @@ $splits = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </svg>
                     <span>Gyms</span>
                 </a>
-                     <a href="workout_view.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
-                            <path d="M12 18h.01"/>
-                        </svg>
-                        <span>Workout</span>
-                    </a>
+                <a href="workout_view.php" class="nav-link flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                        <path d="M12 18h.01"/>
+                    </svg>
+                    <span>Workout</span>
+                </a>
             </div>
 
             <!-- User Info -->
@@ -224,17 +221,12 @@ function updateNavigation() {
         link.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-800');
     });
 
-    if (currentPage === 'index.php' || currentPage === 'home.php' || currentPage === '') {
-        const homeLinks = document.querySelectorAll('a[href="home.php"], a[href="index.php"]');
-        homeLinks.forEach(link => {
-            if (link.classList.contains('mobile-nav-link')) {
-                link.classList.add('active', 'text-orange-500');
-                link.classList.remove('text-gray-400');
-            } else {
-                link.classList.add('active', 'bg-orange-500', 'text-white');
-                link.classList.remove('text-gray-300');
-            }
-        });
+    if (currentPage === 'my_splits.php') {
+        const currentLink = document.querySelector('a[href="my_splits.php"]');
+        if (currentLink) {
+            currentLink.classList.add('bg-orange-500', 'text-white');
+            currentLink.classList.remove('text-gray-300');
+        }
     }
 }
 
@@ -314,8 +306,7 @@ function confirmDelete(splitId, splitName) {
             <i class="fas fa-eye"></i> View
           </a>
 
-    
-          <!-- Delete (only if owned) -->
+          <!-- Delete (only if owned or copy) -->
           <?php if ($split['is_original_owner'] || $split['is_personal_copy']): ?>
             <button onclick="confirmDelete(<?= $split['id'] ?>, '<?= addslashes(htmlspecialchars($split['name'])) ?>')"
                     class="flex-1 min-w-[100px] btn-delete text-white py-2.5 rounded-xl font-medium transition btn-glow flex items-center justify-center gap-2">

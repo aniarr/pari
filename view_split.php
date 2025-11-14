@@ -179,12 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_split'])) {
                   </p>
                 </div>
 
-                <img src='<?= $ex['image_url']
-                      ? "https://wger.de" . htmlspecialchars($ex['image_url'])
-                      : "https://via.placeholder.com/100x100/1a1a1a/ffffff?text=No+Image" ?>'
-                     alt='<?= htmlspecialchars($ex['name']) ?>'
-                     class="w-24 h-24 object-cover rounded-lg shadow-md border border-gray-600"
-                     onerror='this.src="https://via.placeholder.com/100x100/1a1a1a/ffffff?text=No+Image"'>
+               
               </div>
             <?php endforeach; ?>
           </div>
